@@ -138,7 +138,7 @@ function authMiddleware(app: Application, rootPath: string) {
             const token = req.cookies.authToken || req.headers['authorization']
 
             if (!token) {
-                return next(new UnauthorizedException('No autorizado, token faltante'))
+                return next(new UnauthorizedException('No autorizado, token faltante.'))
             }
 
             const adapterToken = ContainerGlobal.get<AdapterToken>(SHARED_TYPES.AdapterToken)
