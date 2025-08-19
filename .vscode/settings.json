@@ -1,0 +1,16 @@
+{
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "javascript.preferences.quoteStyle": "single",
+    "typescript.preferences.quoteStyle": "single",
+    "autoBarrel.files.maxSearchRecursionDepth": 2,
+    "autoBarrel.files.includeExtensionOnExport": [
+        "ts"
+    ],
+    "autoBarrel.files.keepExtensionOnExport": false,
+    "autoBarrel.files.exportDefaultFilename": "filename",
+    "autoBarrel.files.useNamedExports": false,
+    // "autoBarrel.formatting.excludeSemiColonAtEndOfLine": true,
+    "autoBarrel.formatting.useSingleQuotes": true,
+    "autoBarrel.language.defaultLanguage": "TypeScript"
+}
