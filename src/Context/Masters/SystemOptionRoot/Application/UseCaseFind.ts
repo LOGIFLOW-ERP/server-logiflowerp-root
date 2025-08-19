@@ -1,5 +1,5 @@
 import { Response, Request } from 'express'
-import { IRootSystemOptionMongoRepository } from '../Domain'
+import { ISystemOptionRootMongoRepository } from '../Domain'
 import { inject, injectable } from 'inversify'
 import { SYSTEM_OPTION_TYPES } from '../Infrastructure/IoC'
 
@@ -7,7 +7,7 @@ import { SYSTEM_OPTION_TYPES } from '../Infrastructure/IoC'
 export class UseCaseFind {
 
 	constructor(
-		@inject(SYSTEM_OPTION_TYPES.RepositoryMongo) private readonly repository: IRootSystemOptionMongoRepository,
+		@inject(SYSTEM_OPTION_TYPES.RepositoryMongo) private readonly repository: ISystemOptionRootMongoRepository,
 	) { }
 
 	async exec(req: Request, res: Response) {

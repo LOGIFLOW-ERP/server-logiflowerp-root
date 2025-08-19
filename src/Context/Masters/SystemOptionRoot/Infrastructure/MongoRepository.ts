@@ -1,11 +1,11 @@
 import { MongoRepository } from '@Shared/Infrastructure'
-import { IRootSystemOptionMongoRepository } from '../Domain'
+import { ISystemOptionRootMongoRepository } from '../Domain'
 import { AuthUserDTO, SystemOptionENTITY } from 'logiflowerp-sdk'
 import { inject, injectable } from 'inversify'
 import { SYSTEM_OPTION_TYPES } from './IoC'
 
 @injectable()
-export class SystemOptionMongoRepository extends MongoRepository<SystemOptionENTITY> implements IRootSystemOptionMongoRepository {
+export class SystemOptionRootMongoRepository extends MongoRepository<SystemOptionENTITY> implements ISystemOptionRootMongoRepository {
 
     constructor(
         @inject(SYSTEM_OPTION_TYPES.Collection) protected readonly collection: string,

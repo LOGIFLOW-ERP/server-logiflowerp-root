@@ -9,7 +9,7 @@ import {
 import { UseCaseFind } from '../Application'
 import { SYSTEM_OPTION_TYPES } from './IoC'
 
-export class SystemOptionController extends BaseHttpController {
+export class SystemOptionRootController extends BaseHttpController {
 
     constructor(
         @inject(SYSTEM_OPTION_TYPES.UseCaseFind) private readonly useCaseFind: UseCaseFind,
