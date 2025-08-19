@@ -9,6 +9,7 @@ import {
 } from 'inversify-express-utils'
 import {
     UseCaseChangePassword,
+    UseCaseGetSystemOptionRoot,
     UseCaseGetToken,
     UseCaseRequestPasswordReset,
     UseCaseResetPassword,
@@ -31,7 +32,7 @@ import { DataRequestPasswordResetDTO } from '../Domain'
 import { AUTH_TYPES } from './IoC'
 import { CONFIG_TYPES } from '@Config/types'
 
-export class AuthController extends BaseHttpController {
+export class RootAuthController extends BaseHttpController {
     constructor(
         @inject(SHARED_TYPES.AdapterRabbitMQ) private readonly adapterRabbitMQ: AdapterRabbitMQ,
         @inject(AUTH_TYPES.UseCaseSignUp) private readonly useCaseSignUp: UseCaseSignUp,
@@ -40,7 +41,7 @@ export class AuthController extends BaseHttpController {
         @inject(AUTH_TYPES.UseCaseGetToken) private readonly useCaseGetToken: UseCaseGetToken,
         @inject(AUTH_TYPES.UseCaseSignIn) private readonly useCaseSignIn: UseCaseSignIn,
         @inject(AUTH_TYPES.UseCaseChangePassword) private readonly useCaseChangePassword: UseCaseChangePassword,
-        @inject(CONFIG_TYPES.Env) private readonly env: Env,
+        @inject(AUTH_TYPES.UseCaseGetSystemOptionRoot) private readonly useCaseGetSystemOptionRoot: UseCaseGetSystemOptionRoot,
     ) {
         super()
     }
@@ -73,6 +74,7 @@ export class AuthController extends BaseHttpController {
     async signIn(@request() req: Request<{}, {}, SignInDTO>, @response() res: Response) {
         const { user } = await this.useCaseSignIn.exec(req.body)
         const { token, user: userResponse } = await this.useCaseGetToken.exec(user)
+        const { dataSystemOptions } = await this.useCaseGetSystemOptionRoot.exec()
         res.cookie(
             'authToken',
             token,
@@ -84,7 +86,7 @@ export class AuthController extends BaseHttpController {
         )
         const response: ResponseSignIn = {
             user: userResponse,
-            dataSystemOptions: [],
+            dataSystemOptions,
             root: true,
             tags: [],
             company: new CompanyDTO(),

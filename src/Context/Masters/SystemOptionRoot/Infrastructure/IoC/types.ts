@@ -1,4 +1,4 @@
-export const SYSTEM_OPTION_TYPES = {
+export const SYSTEM_OPTION_ROOT_TYPES = {
     RepositoryMongo: Symbol.for(`${__dirname}RepositoryMongo`),
     UseCaseFind: Symbol.for(`${__dirname}UseCaseFind`),
     UseCaseSave: Symbol.for(`${__dirname}UseCaseSave`),

@@ -1,1 +1,1 @@
-export { SYSTEM_OPTION_TYPES } from './types';
+export { SYSTEM_OPTION_ROOT_TYPES } from './types';

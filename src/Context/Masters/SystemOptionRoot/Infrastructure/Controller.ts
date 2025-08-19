@@ -7,12 +7,12 @@ import {
     response
 } from 'inversify-express-utils'
 import { UseCaseFind } from '../Application'
-import { SYSTEM_OPTION_TYPES } from './IoC'
+import { SYSTEM_OPTION_ROOT_TYPES } from './IoC'
 
-export class SystemOptionRootController extends BaseHttpController {
+export class RootSystemOptionRootController extends BaseHttpController {
 
     constructor(
-        @inject(SYSTEM_OPTION_TYPES.UseCaseFind) private readonly useCaseFind: UseCaseFind,
+        @inject(SYSTEM_OPTION_ROOT_TYPES.UseCaseFind) private readonly useCaseFind: UseCaseFind,
     ) {
         super()
     }
