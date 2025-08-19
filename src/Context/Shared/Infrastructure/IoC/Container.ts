@@ -11,7 +11,6 @@ import {
 } from '../Adapters'
 import { Bootstraping } from '@Shared/Bootstraping'
 import { BootstrapingDatabaseMongo } from '@Shared/Bootstraping/database'
-import { db_root } from 'logiflowerp-sdk'
 
 export const containerModule = new ContainerModule(bind => {
     bind(SHARED_TYPES.AdapterToken).to(AdapterToken).inSingletonScope()
@@ -23,5 +22,4 @@ export const containerModule = new ContainerModule(bind => {
     bind(SHARED_TYPES.AdapterRabbitMQ).to(AdapterRabbitMQ).inSingletonScope()
     bind(SHARED_TYPES.BootstrapingDatabaseMongo).to(BootstrapingDatabaseMongo)
     bind(SHARED_TYPES.Bootstraping).to(Bootstraping)
-    bind(SHARED_TYPES.DB).toConstantValue(db_root)
 })

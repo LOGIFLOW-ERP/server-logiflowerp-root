@@ -31,7 +31,7 @@ import { DataRequestPasswordResetDTO } from '../Domain'
 import { AUTH_TYPES } from './IoC'
 import { CONFIG_TYPES } from '@Config/types'
 
-export class RootAuthController extends BaseHttpController {
+export class AuthController extends BaseHttpController {
     constructor(
         @inject(SHARED_TYPES.AdapterRabbitMQ) private readonly adapterRabbitMQ: AdapterRabbitMQ,
         @inject(AUTH_TYPES.UseCaseSignUp) private readonly useCaseSignUp: UseCaseSignUp,

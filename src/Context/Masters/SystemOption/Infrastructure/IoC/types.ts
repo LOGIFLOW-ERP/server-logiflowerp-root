@@ -1,8 +1,7 @@
-export const USER_TYPES = {
+export const SYSTEM_OPTION_TYPES = {
     RepositoryMongo: Symbol.for(`${__dirname}RepositoryMongo`),
     UseCaseFind: Symbol.for(`${__dirname}UseCaseFind`),
-    UseCaseGetByIdentity: Symbol.for(`${__dirname}UseCaseGetByIdentity`),
-    UseCaseUpdateOne: Symbol.for(`${__dirname}UseCaseUpdateOne`),
+    UseCaseSave: Symbol.for(`${__dirname}UseCaseSave`),
     Collection: Symbol.for(`${__dirname}Collection`),
     DB: Symbol.for(`${__dirname}DB`),
 }

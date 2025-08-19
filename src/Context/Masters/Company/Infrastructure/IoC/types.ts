@@ -7,4 +7,5 @@ export const COMPANY_TYPES = {
     UseCaseInsertOnePER: Symbol.for(`${__dirname}UseCaseInsertOnePER`),
     UseCaseUpdateOne: Symbol.for(`${__dirname}UseCaseUpdateOne`),
     Collection: Symbol.for(`${__dirname}Collection`),
+    DB: Symbol.for(`${__dirname}DB`),
 }
