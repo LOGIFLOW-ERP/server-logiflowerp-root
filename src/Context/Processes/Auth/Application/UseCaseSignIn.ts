@@ -35,9 +35,15 @@ export class UseCaseSignIn {
         }
     }
 
-    private searchUser(email: string) {
+    private async searchUser(email: string) {
         const pipeline = [{ $match: { email, state: State.ACTIVO, isDeleted: false } }]
-        return this.repository.selectOne(pipeline)
+        const result = await this.repository.select(pipeline)
+        if (result.length === 0) {
+            throw new ForbiddenException('Usuario no encontrado', true)
+        }
+        if (result.length > 1) {
+            throw new ForbiddenException('Se encontró más de un usuario', true)
+        }
+        return result[0]
     }
-
 }
