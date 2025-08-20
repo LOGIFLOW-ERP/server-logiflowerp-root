@@ -32,6 +32,7 @@ export class AdapterRabbitMQ {
     }
 
     async publish(params: IParamsPublish) {
+        await this.connect()
         const { queue, message, user } = params
         await this.channel.assertQueue(queue, { durable: true })
         const result = this.channel.sendToQueue(
@@ -48,6 +49,7 @@ export class AdapterRabbitMQ {
     }
 
     async publishFanout(params: IParamsPublishFanout) {
+        await this.connect()
         const { exchange, message, user } = params
         await this.channel.assertExchange(exchange, 'fanout', { durable: true })
         const result = this.channel.publish(

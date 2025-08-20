@@ -1,5 +1,5 @@
 import { Expose } from 'class-transformer'
-import { IsBoolean, IsNotEmpty, IsString } from 'class-validator'
+import { IsBoolean, IsDefined, IsNotEmpty, IsString } from 'class-validator'
 
 export class ISUNATCompanyData {
     @IsString()
@@ -112,33 +112,33 @@ export class ISUNATCompanyData {
     @Expose()
     EsBuenContribuyente: boolean = false
 
+    @IsDefined({ message: 'El campo "tipo" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     tipo: string = ''
 
+    @IsDefined({ message: 'El campo "actividadEconomica" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     actividadEconomica: string = ''
 
+    @IsDefined({ message: 'El campo "numeroTrabajadores" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     numeroTrabajadores: string = ''
 
+    @IsDefined({ message: 'El campo "tipoFacturacion" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     tipoFacturacion: string = ''
 
+    @IsDefined({ message: 'El campo "tipoContabilidad" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     tipoContabilidad: string = ''
 
+    @IsDefined({ message: 'El campo "comercioExterior" es requerido' })
     @IsString()
-    @IsNotEmpty()
     @Expose()
     comercioExterior: string = ''
 }
