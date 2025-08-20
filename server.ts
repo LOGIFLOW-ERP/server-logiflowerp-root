@@ -10,6 +10,7 @@ import { registerContainer } from '@Config/inversify'
 import { initCollections } from '@Config/collections'
 import { initSocket } from '@Config/socket'
 import { subscribeRabbitMQ } from '@Config/subscribeRabbitMQ'
+import { registerRoutes } from '@Config/registerRoutes'
 
 const Bootstrap = async () => {
 
@@ -30,6 +31,8 @@ const Bootstrap = async () => {
     server.setConfig((app) => serverConfig(app, rootPath))
     server.setErrorConfig(serverErrorConfig)
     const expressApp = server.build()
+
+    await registerRoutes(rootPath)
 
     const httpServer = initSocket(expressApp)
 

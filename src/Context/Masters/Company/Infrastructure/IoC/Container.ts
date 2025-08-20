@@ -9,7 +9,7 @@ import {
     UseCaseInsertOnePER,
     UseCaseUpdateOne
 } from '../../Application';
-import { collection } from '../config';
+import { collection, db } from '../config';
 
 export const containerModule = new ContainerModule(bind => {
     bind(COMPANY_TYPES.RepositoryMongo).to(CompanyMongoRepository)
@@ -20,4 +20,5 @@ export const containerModule = new ContainerModule(bind => {
     bind(COMPANY_TYPES.UseCaseInsertOnePER).to(UseCaseInsertOnePER)
     bind(COMPANY_TYPES.UseCaseUpdateOne).to(UseCaseUpdateOne)
     bind(COMPANY_TYPES.Collection).toConstantValue(collection)
+    bind(COMPANY_TYPES.DB).toConstantValue(db)
 })

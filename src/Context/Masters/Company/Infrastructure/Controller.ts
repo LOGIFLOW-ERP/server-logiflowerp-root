@@ -31,7 +31,7 @@ import { COMPANY_TYPES } from './IoC'
 import { AdapterRabbitMQ, SHARED_TYPES } from '@Shared/Infrastructure'
 import { CONFIG_TYPES } from '@Config/types'
 
-export class RootCompanyController extends BaseHttpController {
+export class CompanyController extends BaseHttpController {
 
     constructor(
         @inject(COMPANY_TYPES.UseCaseDeleteOne) private readonly useCaseDeleteOne: UseCaseDeleteOne,

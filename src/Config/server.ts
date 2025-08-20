@@ -121,11 +121,11 @@ function authMiddleware(app: Application, rootPath: string) {
             let serviceNoAuth: boolean = true
 
             const publicRoutes = [
-                `${rootPath}/processes/rootauth/sign-in`,
-                `${rootPath}/processes/rootauth/sign-up`,
-                `${rootPath}/processes/rootauth/sign-out`,
-                `${rootPath}/processes/rootauth/request-password-reset`,
-                `${rootPath}/processes/rootauth/reset-password`,
+                `${rootPath}/processes/auth/sign-in`,
+                `${rootPath}/processes/auth/sign-up`,
+                `${rootPath}/processes/auth/sign-out`,
+                `${rootPath}/processes/auth/request-password-reset`,
+                `${rootPath}/processes/auth/reset-password`,
             ]
             const url = req.originalUrl.toLowerCase()
 
