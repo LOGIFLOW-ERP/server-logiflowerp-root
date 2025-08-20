@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@Config/exception'
+import { ConflictException, ForbiddenException } from '@Config/exception'
 import { SignInDTO, State, UserENTITY } from 'logiflowerp-sdk'
 import { IUserMongoRepository } from '@Masters/User/Domain'
 import { CONFIG_TYPES } from '@Config/types'
@@ -38,11 +38,11 @@ export class UseCaseSignIn {
     private async searchUser(email: string) {
         const pipeline = [{ $match: { email, state: State.ACTIVO, isDeleted: false } }]
         const result = await this.repository.select(pipeline)
-        if (result.length === 0) {
-            throw new ForbiddenException('Usuario no encontrado', true)
+        if (!result.length) {
+            throw new ForbiddenException('Credenciales inválidas', true)
         }
         if (result.length > 1) {
-            throw new ForbiddenException('Se encontró más de un usuario', true)
+            throw new ConflictException(`Se encontraron múltiples usuarios con email ${email}.`)
         }
         return result[0]
     }
