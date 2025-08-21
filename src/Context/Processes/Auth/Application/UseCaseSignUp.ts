@@ -41,7 +41,6 @@ export class UseCaseSignUp {
 			newUser.names = RENIECPersonalData.nombres
 			newUser.surnames = `${RENIECPersonalData.apellidoPaterno} ${RENIECPersonalData.apellidoMaterno}`
 		}
-		newUser.emailVerified = true
 		return newUser
 	}
 

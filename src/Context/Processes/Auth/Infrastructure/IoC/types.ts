@@ -6,4 +6,6 @@ export const AUTH_TYPES = {
     UseCaseSignIn: Symbol.for(`${__dirname}UseCaseSignIn`),
     UseCaseChangePassword: Symbol.for(`${__dirname}UseCaseChangePassword`),
     UseCaseGetSystemOptionRoot: Symbol.for(`${__dirname}UseCaseGetSystemOptionRoot`),
+    UseCaseVerifyEmail: Symbol.for(`${__dirname}UseCaseVerifyEmail`),
+    UseCaseResendMailRegisterUser: Symbol.for(`${__dirname}UseCaseResendMailRegisterUser`),
 }

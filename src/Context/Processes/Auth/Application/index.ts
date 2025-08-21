@@ -5,3 +5,5 @@ export * from './UseCaseSignIn';
 export * from './UseCaseSignUp';
 export * from './UseCaseChangePassword';
 export * from './UseCaseGetSystemOptionRoot';
+export * from './UseCaseVerifyEmail';
+export * from './UseCaseResendMailRegisterUser';

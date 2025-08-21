@@ -1,10 +1,11 @@
-import { ICompanyMongoRepository, ISUNATCompanyData } from '../Domain';
+import { ICompanyMongoRepository } from '../Domain';
 import {
     collections,
     // CompanyENTITY,
     // CompanyUserDTO,
     CreateRootCompanyPERDTO,
     RootCompanyENTITY,
+    SUNATCompanyDataDTO,
     // UserENTITY,
     validateCustom
 } from 'logiflowerp-sdk';
@@ -44,11 +45,11 @@ export class UseCaseInsertOnePER {
     private async SUNATCompanyDataConsultation(ruc: string) {
         const url = `${this.env.DNI_LOOKUP_API_URL}/v2/sunat/ruc/full?numero=${ruc}`
         const headers = { Authorization: `Bearer ${this.env.DNI_LOOKUP_API_TOKEN}` }
-        const result = await this.adapterApiRequest.get<ISUNATCompanyData>(url, { headers })       
-        return validateCustom(result, ISUNATCompanyData, UnprocessableEntityException)
+        const result = await this.adapterApiRequest.get<SUNATCompanyDataDTO>(url, { headers })       
+        return validateCustom(result, SUNATCompanyDataDTO, UnprocessableEntityException)
     }
 
-    private completeDataPER(entity: RootCompanyENTITY, SUNATCompanyData: ISUNATCompanyData) {
+    private completeDataPER(entity: RootCompanyENTITY, SUNATCompanyData: SUNATCompanyDataDTO) {
         entity.address = SUNATCompanyData.direccion
         entity.companyname = SUNATCompanyData.razonSocial
         entity.sector = SUNATCompanyData.actividadEconomica
