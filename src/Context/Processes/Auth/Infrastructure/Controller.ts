@@ -12,15 +12,18 @@ import {
     UseCaseGetSystemOptionRoot,
     UseCaseGetToken,
     UseCaseRequestPasswordReset,
+    UseCaseResendMailRegisterUser,
     UseCaseResetPassword,
     UseCaseSignIn,
     UseCaseSignUp,
+    UseCaseVerifyEmail,
 } from '../Application'
 import {
     ChangePasswordDTO,
     CompanyDTO,
     CreateUserDTO,
     EmployeeAuthDTO,
+    getQueueNameMailRegisterUser,
     ProfileDTO,
     ResetPasswordDTO,
     ResponseSignIn,
@@ -28,7 +31,7 @@ import {
     validateRequestBody as VRB
 } from 'logiflowerp-sdk'
 import { AdapterRabbitMQ, SHARED_TYPES } from '@Shared/Infrastructure'
-import { DataRequestPasswordResetDTO } from '../Domain'
+import { DataRequestPasswordResetDTO, DataRequestResendMailRegisterUser, DataVerifyEmailDTO } from '../Domain'
 import { AUTH_TYPES } from './IoC'
 import { CONFIG_TYPES } from '@Config/types'
 
@@ -36,12 +39,15 @@ export class RootAuthController extends BaseHttpController {
     constructor(
         @inject(SHARED_TYPES.AdapterRabbitMQ) private readonly adapterRabbitMQ: AdapterRabbitMQ,
         @inject(AUTH_TYPES.UseCaseSignUp) private readonly useCaseSignUp: UseCaseSignUp,
+        @inject(AUTH_TYPES.UseCaseVerifyEmail) private readonly useCaseVerifyEmail: UseCaseVerifyEmail,
         @inject(AUTH_TYPES.UseCaseRequestPasswordReset) private readonly useCaseRequestPasswordReset: UseCaseRequestPasswordReset,
         @inject(AUTH_TYPES.UseCaseResetPassword) private readonly useCaseResetPassword: UseCaseResetPassword,
         @inject(AUTH_TYPES.UseCaseGetToken) private readonly useCaseGetToken: UseCaseGetToken,
         @inject(AUTH_TYPES.UseCaseSignIn) private readonly useCaseSignIn: UseCaseSignIn,
         @inject(AUTH_TYPES.UseCaseChangePassword) private readonly useCaseChangePassword: UseCaseChangePassword,
         @inject(AUTH_TYPES.UseCaseGetSystemOptionRoot) private readonly useCaseGetSystemOptionRoot: UseCaseGetSystemOptionRoot,
+        @inject(AUTH_TYPES.UseCaseResendMailRegisterUser) private readonly useCaseResendMailRegisterUser: UseCaseResendMailRegisterUser,
+        @inject(CONFIG_TYPES.Env) private readonly env: Env,
     ) {
         super()
     }
@@ -49,7 +55,18 @@ export class RootAuthController extends BaseHttpController {
     @httpPost('sign-up', VRB.bind(null, CreateUserDTO, BRE))
     async saveOne(@request() req: Request<{}, {}, CreateUserDTO>, @response() res: Response) {
         const newDoc = await this.useCaseSignUp.exec(req.body)
+        const message = {
+            entity: newDoc,
+            origin: req.headers.origin || '',
+        }
+        await this.adapterRabbitMQ.publish({ queue: getQueueNameMailRegisterUser({ NODE_ENV: this.env.NODE_ENV, PREFIX: this.env.PREFIX }), message })
         res.status(201).json(newDoc)
+    }
+
+    @httpPost('verify-email', VRB.bind(null, DataVerifyEmailDTO, BRE))
+    async verifyEmail(@request() req: Request<{}, {}, DataVerifyEmailDTO>, @response() res: Response) {
+        await this.useCaseVerifyEmail.exec(req.body)
+        res.sendStatus(204)
     }
 
     @httpPost('request-password-reset', VRB.bind(null, DataRequestPasswordResetDTO, BRE))
@@ -87,7 +104,6 @@ export class RootAuthController extends BaseHttpController {
         const response: ResponseSignIn = {
             user: userResponse,
             dataSystemOptions,
-            root: true,
             tags: [],
             company: new CompanyDTO(),
             profile: new ProfileDTO(),
@@ -100,5 +116,16 @@ export class RootAuthController extends BaseHttpController {
     async signOut(@request() _req: Request, @response() res: Response) {
         res.clearCookie('authToken')
         res.sendStatus(204)
+    }
+
+    @httpPost('resend-mail-register-user', VRB.bind(null, DataRequestResendMailRegisterUser, BRE))
+    async resendMailRegisterUser(@request() req: Request<{}, {}, DataRequestResendMailRegisterUser>, @response() res: Response) {
+        const newDoc = await this.useCaseResendMailRegisterUser.exec(req.body)
+        const message = {
+            entity: newDoc,
+            origin: req.headers.origin || '',
+        }
+        await this.adapterRabbitMQ.publish({ queue: getQueueNameMailRegisterUser({ NODE_ENV: this.env.NODE_ENV, PREFIX: this.env.PREFIX }), message })
+        res.status(201).json(newDoc)
     }
 }
