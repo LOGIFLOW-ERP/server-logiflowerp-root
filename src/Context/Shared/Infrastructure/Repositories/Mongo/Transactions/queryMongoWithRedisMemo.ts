@@ -41,9 +41,15 @@ export async function _queryMongoWithRedisMemo<T extends Document>(params: Pick<
             const existLater = await redis.client.xLen(key);
             if (existLater) {
                 const result = await redis.client.xRead({ key, id: '0-0' });
-                return result?.flatMap(e =>
+                const parsed = result?.flatMap(e =>
                     e.messages.map(m => JSON.parse(m.message.data) as T)
-                ) ?? [];
+                ) ?? []
+
+                if (parsed.length === 1 && Array.isArray(parsed[0]) && parsed[0].length === 0) {
+                    return []
+                }
+
+                return parsed as T[];
             }
             await new Promise(r => setTimeout(r, interval));
             waited += interval;
@@ -64,7 +70,13 @@ export async function _queryMongoWithRedisMemo<T extends Document>(params: Pick<
 
     // Acceder a MongoDB y escribir en Redis
     try {
-        const documents = await collection.aggregate<T>(pipeline).toArray();
+        const documents = await collection.aggregate<T>(pipeline).toArray()
+
+        if (documents.length === 0) {
+            await redis.client.xAdd(key, '*', { data: JSON.stringify([]) });
+            return [];
+        }
+
         for (const doc of documents) {
             await redis.client.xAdd(key, '*', { data: JSON.stringify(doc) });
         }
