@@ -2,7 +2,7 @@ import { ForbiddenException, UnprocessableEntityException } from '@Config/except
 import { CONFIG_TYPES } from '@Config/types'
 import { IRENIECPersonalData, IUserMongoRepository } from '@Masters/User/Domain'
 import { USER_TYPES } from '@Masters/User/Infrastructure/IoC'
-import { AdapterApiRequest, SHARED_TYPES } from '@Shared/Infrastructure'
+import { AdapterApiRequest, AdapterEncryption, SHARED_TYPES } from '@Shared/Infrastructure'
 import { inject, injectable } from 'inversify'
 import { CreateUserDTO, DocumentType, UserENTITY, validateCustom } from 'logiflowerp-sdk'
 
@@ -13,6 +13,7 @@ export class UseCaseSignUp {
 		@inject(USER_TYPES.RepositoryMongo) private readonly repository: IUserMongoRepository,
 		@inject(SHARED_TYPES.AdapterApiRequest) private readonly adapterApiRequest: AdapterApiRequest,
 		@inject(CONFIG_TYPES.Env) private readonly env: Env,
+		@inject(SHARED_TYPES.AdapterEncryption) private readonly adapterEncryption: AdapterEncryption,
 	) { }
 
 	async exec(dto: CreateUserDTO) {
@@ -20,7 +21,7 @@ export class UseCaseSignUp {
 			throw new ForbiddenException('Acceso denegado: este usuario no está autorizado como administrador', true)
 		}
 		const RENIECPersonalData = await this.RENIECPersonalDataConsultation(dto)
-		const entity = this.completeUserData(dto, RENIECPersonalData)
+		const entity = await this.completeUserData(dto, RENIECPersonalData)
 		const validatedEntity = await validateCustom(entity, UserENTITY, UnprocessableEntityException)
 		return this.repository.insertOne(validatedEntity)
 	}
@@ -33,7 +34,7 @@ export class UseCaseSignUp {
 		return validateCustom(result, IRENIECPersonalData, UnprocessableEntityException)
 	}
 
-	private completeUserData(dto: CreateUserDTO, RENIECPersonalData: IRENIECPersonalData | undefined) {
+	private async completeUserData(dto: CreateUserDTO, RENIECPersonalData: IRENIECPersonalData | undefined) {
 		const newUser = new UserENTITY()
 		newUser._id = crypto.randomUUID()
 		newUser.set(dto)
@@ -41,6 +42,7 @@ export class UseCaseSignUp {
 			newUser.names = RENIECPersonalData.nombres
 			newUser.surnames = `${RENIECPersonalData.apellidoPaterno} ${RENIECPersonalData.apellidoMaterno}`
 		}
+		newUser.password = await this.adapterEncryption.hashPassword(dto.password)
 		return newUser
 	}
 
