@@ -10,8 +10,6 @@ export const env = {
     REDIS_URL: get('REDIS_URL').required().asUrlString(),
     FRONTEND_URL: get('FRONTEND_URL').required().asUrlString(),
     JWT_KEY: get('JWT_KEY').required().asString(),
-    ENCRYPTION_KEY: get('ENCRYPTION_KEY').required().asString(),
-    REQUIRE_ENCRYPTION: get('REQUIRE_ENCRYPTION').required().asBool(),
     EMAIL_USER: get('EMAIL_USER').required().asEmailString(),
     EMAIL_PASS: get('EMAIL_PASS').required().asString(),
     SMTP_HOST: get('SMTP_HOST').required().asString(),
