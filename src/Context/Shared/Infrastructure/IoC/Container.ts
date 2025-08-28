@@ -2,6 +2,7 @@ import { ContainerModule } from 'inversify'
 import { SHARED_TYPES } from './types'
 import {
     AdapterApiRequest,
+    AdapterEncryption,
     AdapterMail,
     AdapterMongoDB,
     AdapterRabbitMQ,
@@ -24,4 +25,5 @@ export const containerModule = new ContainerModule(bind => {
     bind(SHARED_TYPES.BootstrapingDatabaseMongo).to(BootstrapingDatabaseMongo)
     bind(SHARED_TYPES.Bootstraping).to(Bootstraping)
     bind(SHARED_TYPES.UseCaseSendMailRegisterUser).to(UseCaseSendMailRegisterUser)
+    bind(SHARED_TYPES.AdapterEncryption).to(AdapterEncryption)
 })

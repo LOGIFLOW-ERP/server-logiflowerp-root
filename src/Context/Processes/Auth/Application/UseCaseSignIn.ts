@@ -4,6 +4,7 @@ import { IUserMongoRepository } from '@Masters/User/Domain'
 import { CONFIG_TYPES } from '@Config/types'
 import { inject, injectable } from 'inversify'
 import { USER_TYPES } from '@Masters/User/Infrastructure/IoC'
+import { AdapterEncryption, SHARED_TYPES } from '@Shared/Infrastructure'
 
 @injectable()
 export class UseCaseSignIn {
@@ -11,6 +12,7 @@ export class UseCaseSignIn {
     constructor(
         @inject(USER_TYPES.RepositoryMongo) private readonly repository: IUserMongoRepository,
         @inject(CONFIG_TYPES.Env) private readonly env: Env,
+        @inject(SHARED_TYPES.AdapterEncryption) private readonly adapterEncryption: AdapterEncryption,
     ) { }
 
     async exec(dto: SignInDTO) {
@@ -24,12 +26,12 @@ export class UseCaseSignIn {
         if (!user.emailVerified) {
             throw new ForbiddenException('Correo no verificado', true)
         }
-        this.verifyPassword(dto, user)
+        await this.verifyPassword(dto, user)
         return { user }
     }
 
-    private verifyPassword(dto: SignInDTO, user: UserENTITY) {
-        const isValid = dto.password === user.password
+    private async verifyPassword(dto: SignInDTO, user: UserENTITY) {
+        const isValid = await this.adapterEncryption.verifyPassword(dto.password, user.password)
         if (!isValid) {
             throw new ForbiddenException('Credenciales inválidas', true)
         }
