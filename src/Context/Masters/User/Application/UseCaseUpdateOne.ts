@@ -13,7 +13,7 @@ export class UseCaseUpdateOne {
 	async exec(id: string, dto: UpdateUserDTO) {
 
 		const filter = { _id: id }
-		const update = { $set: { password: dto.password } }
+		const update = { $set: dto }
 
 		return await this.repository.updateOne(filter, update)
 
