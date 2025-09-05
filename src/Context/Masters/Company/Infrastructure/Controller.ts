@@ -13,6 +13,7 @@ import {
     CreateRootCompanyDTO,
     CreateRootCompanyPERDTO,
     getExchangeNameInitializationCollections,
+    getQueueNameMailWelcomeCompany,
     UpdateRootCompanyDTO,
     validateCustom,
     validateRequestBody as VRB,
@@ -73,6 +74,7 @@ export class CompanyController extends BaseHttpController {
         const validatedBody = await validateCustom(req.body, config.dto, BRE)
         const result = await config.useCase.exec(validatedBody)
         await this.adapterRabbitMQ.publishFanout({ exchange: getExchangeNameInitializationCollections({ NODE_ENV: this.env.NODE_ENV }), message: [result] })
+        await this.adapterRabbitMQ.publish({ queue: getQueueNameMailWelcomeCompany({ NODE_ENV: this.env.NODE_ENV, PREFIX: this.env.PREFIX }), message: result })
         res.sendStatus(204)
     }
 
