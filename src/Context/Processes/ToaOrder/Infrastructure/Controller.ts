@@ -24,7 +24,7 @@ export class RootToaOrderController extends BaseHttpController {
     }
 
     @httpPost('save', VRB.bind(null, DataRequestSave, BRE))
-    async verifyEmail(@request() req: Request, @response() res: Response) {
+    private async save(@request() req: Request, @response() res: Response) {
         await this.useCaseSave.exec(req.body)
         res.sendStatus(204)
     }

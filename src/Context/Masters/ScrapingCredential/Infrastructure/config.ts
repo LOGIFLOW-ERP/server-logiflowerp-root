@@ -1,4 +1,4 @@
 import { collections, db_root } from 'logiflowerp-sdk'
 
-export const collection = collections.scraping_credential
+export const collection = collections.scrapingCredential
 export const db = db_root

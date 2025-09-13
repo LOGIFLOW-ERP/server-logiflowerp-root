@@ -166,7 +166,8 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
             await this.adapterMongo.openTransaction(session)
             const mapTransaction: IMapTransaction = {
                 insertOne: _insertOne,
-                updateOne: _updateOne
+                updateOne: _updateOne,
+                insertMany: _insertMany
             }
             for (const transaction of transactions) {
                 if (!mapTransaction[transaction.transaction]) {
@@ -182,6 +183,7 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
                     col,
                     session,
                     doc: transaction.doc,
+                    docs: transaction.docs,
                     filter: filterWithDeleted,
                     update: transaction.update,
                     user: this.user

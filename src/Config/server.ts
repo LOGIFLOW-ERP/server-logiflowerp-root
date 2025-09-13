@@ -127,7 +127,7 @@ function authMiddleware(app: Application, rootPath: string) {
 
             if (!serviceNoAuth) return next()
 
-            const token = req.cookies.authToken || req.headers['authorization']
+            const token = req.cookies.authToken || req.headers['authorization']?.split(' ')[1]
 
             if (!token) {
                 return next(new UnauthorizedException('No autorizado, token faltante.'))

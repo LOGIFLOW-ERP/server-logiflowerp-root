@@ -18,6 +18,7 @@ export class UseCaseSave {
     async exec(data: DataRequestSave) {
         const companies = await this.getActiveCompanies()
         const orderedData = await this.groupOrdersByCompany(data.data, companies)
+        await this.saveData(orderedData)
     }
 
     private getActiveCompanies() {
@@ -60,5 +61,24 @@ export class UseCaseSave {
         }
 
         return result
+    }
+
+    private async saveData(orderedData: Map<string, TOAOrderENTITY[]>) {
+        for (const [clave, valor] of orderedData) {
+            if (!valor.length) {
+                continue
+            }
+
+            const transactions: ITransaction<any>[] = []
+
+            const transaction: ITransaction<TOAOrderENTITY> = {
+                database: clave,
+                collection: collections.toaOrder,
+                transaction: 'insertMany',
+                docs: valor
+            }
+            transactions.push(transaction)
+            await this.repository.executeTransactionBatch(transactions)
+        }
     }
 }
