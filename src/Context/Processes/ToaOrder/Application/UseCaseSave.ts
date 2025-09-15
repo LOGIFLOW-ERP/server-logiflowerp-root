@@ -4,6 +4,7 @@ import { TOA_ORDER_TYPES } from '../Infrastructure/IoC/types'
 import {
     collections,
     EmployeeENTITY,
+    RequestNumberTTLENTITY,
     RootCompanyENTITY,
     State,
     TOAOrderENTITY
@@ -43,7 +44,7 @@ export class UseCaseSave {
         const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
 
         for (const company of companies) {
-            let personal = await this.repository.select<EmployeeENTITY>(
+            const personal = await this.repository.select<EmployeeENTITY>(
                 pipeline,
                 collections.employee,
                 company.code
@@ -64,21 +65,78 @@ export class UseCaseSave {
     }
 
     private async saveData(orderedData: Map<string, TOAOrderENTITY[]>) {
-        for (const [clave, valor] of orderedData) {
-            if (!valor.length) {
-                continue
-            }
+        for (const [codeCompany, orders] of orderedData) {
+            const pipeline = [
+                { $match: { numero_de_peticion: { $in: orders.map(e => e.numero_de_peticion) } } }
+            ]
+            const ordersDB = await this.repository.select(pipeline, collections.toaOrder, codeCompany)
+
+            const ordersMap = new Map(
+                ordersDB.map(o => [o.numero_de_peticion, o])
+            )
 
             const transactions: ITransaction<any>[] = []
+            const toInsert: TOAOrderENTITY[] = []
+            const toTTL: RequestNumberTTLENTITY[] = []
 
-            const transaction: ITransaction<TOAOrderENTITY> = {
-                database: clave,
-                collection: collections.toaOrder,
-                transaction: 'insertMany',
-                docs: valor
+            for (const order of orders) {
+                const exist = ordersMap.get(order.numero_de_peticion)
+
+                if (exist) {
+                    if (exist.estado_actividad !== 'Completado') {
+                        transactions.push({
+                            database: codeCompany,
+                            collection: collections.toaOrder,
+                            transaction: 'updateOne',
+                            filter: { _id: exist._id },
+                            update: {
+                                $set: {
+                                    tecnico: order.tecnico,
+                                    toa_resource_id: order.toa_resource_id,
+                                    estado_actividad: order.estado_actividad,
+                                    settlement_date: order.settlement_date,
+                                    inventory: order.inventory,
+                                    products_services_contracted: order.products_services_contracted,
+                                    fecha_de_cita: order.fecha_de_cita
+                                }
+                            }
+                        })
+                    } else {
+                        console.warn(`El estado de la orden ${exist.numero_de_peticion} es Completado`)
+                    }
+                } else {
+                    toInsert.push(order)
+                }
+
+                if (order.estado_actividad === 'Completado') {
+                    toTTL.push({
+                        _id: crypto.randomUUID(),
+                        createdAt: new Date(),
+                        numero_de_peticion: order.numero_de_peticion
+                    } as RequestNumberTTLENTITY)
+                }
             }
-            transactions.push(transaction)
-            await this.repository.executeTransactionBatch(transactions)
+
+            if (toInsert.length) {
+                transactions.push({
+                    database: codeCompany,
+                    collection: collections.toaOrder,
+                    transaction: 'insertMany',
+                    docs: toInsert
+                })
+            }
+
+            if (toTTL.length) {
+                transactions.push({
+                    collection: collections.requestNumberTTL,
+                    transaction: 'insertMany',
+                    docs: toTTL
+                })
+            }
+
+            if (transactions.length) {
+                await this.repository.executeTransactionBatch(transactions)
+            }
         }
     }
 }
