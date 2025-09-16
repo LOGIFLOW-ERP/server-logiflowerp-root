@@ -1,4 +1,5 @@
 export * from './UseCaseGetToken';
+export * from './UseCaseGetTokenApp';
 export * from './UseCaseRequestPasswordReset';
 export * from './UseCaseResetPassword';
 export * from './UseCaseSignIn';
