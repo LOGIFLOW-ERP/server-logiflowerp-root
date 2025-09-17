@@ -7,8 +7,11 @@ import {
     RequestNumberTTLENTITY,
     RootCompanyENTITY,
     State,
-    TOAOrderENTITY
+    TOAOrderENTITY,
+    ToaOrderStock,
+    validateCustom
 } from 'logiflowerp-sdk'
+import { UnprocessableEntityException } from '@Config/exception'
 
 @injectable()
 export class UseCaseSave {
@@ -78,6 +81,7 @@ export class UseCaseSave {
             const transactions: ITransaction<any>[] = []
             const toInsert: TOAOrderENTITY[] = []
             const toTTL: RequestNumberTTLENTITY[] = []
+            const toToaOrderStock: ToaOrderStock[] = []
 
             for (const order of orders) {
                 const exist = ordersMap.get(order.numero_de_peticion)
@@ -114,6 +118,11 @@ export class UseCaseSave {
                         createdAt: new Date(),
                         numero_de_peticion: order.numero_de_peticion
                     } as RequestNumberTTLENTITY)
+                    for (const inv of order.inventory) {
+                        const obj = { ...inv, ...order, _id: crypto.randomUUID() } as any
+                        const entity = await validateCustom(obj, ToaOrderStock, UnprocessableEntityException)
+                        toToaOrderStock.push(entity)
+                    }
                 }
             }
 
@@ -131,6 +140,15 @@ export class UseCaseSave {
                     collection: collections.requestNumberTTL,
                     transaction: 'insertMany',
                     docs: toTTL
+                })
+            }
+
+            if (toToaOrderStock.length) {
+                transactions.push({
+                    database: codeCompany,
+                    collection: collections.toaOrderStock,
+                    transaction: 'insertMany',
+                    docs: toToaOrderStock
                 })
             }
 
