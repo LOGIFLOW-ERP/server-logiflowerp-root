@@ -14,10 +14,13 @@ export const env = {
     EMAIL_PASS: get('EMAIL_PASS').required().asString(),
     SMTP_HOST: get('SMTP_HOST').required().asString(),
     SMTP_PORT: get('SMTP_PORT').required().asInt(),
-    SMTP_SECURE: get('SMTP_SECURE').required().asBool(),
+    SMTP_SECURE: get('SMTP_SECURE').required().asBoolStrict(),
+    JOBS: get('JOBS').required().asBoolStrict(),
     DNI_LOOKUP_API_URL: get('DNI_LOOKUP_API_URL').required().asUrlString(),
     DNI_LOOKUP_API_TOKEN: get('DNI_LOOKUP_API_TOKEN').required().asString(),
     ADMINISTRATOR_EMAILS: get('ADMINISTRATOR_EMAILS').required().asArray(),
+    TOA_EXECUTION_HOUR: get('TOA_EXECUTION_HOUR').required().asIntPositive(),
+    TOA_EXECUTION_MINUTE: get('TOA_EXECUTION_MINUTE').required().asIntPositive(),
 }
 
 export type typeEnv = typeof env

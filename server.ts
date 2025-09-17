@@ -2,15 +2,16 @@ import 'reflect-metadata'
 import express from 'express'
 import { InversifyExpressServer } from 'inversify-express-utils'
 import { env } from '@Config/env'
-import { ContainerGlobal } from '@Config/inversify'
+import { initJobs } from '@Config/jobs'
+import { initSocket } from '@Config/socket'
 import { serverConfig } from '@Config/server'
 import { serverErrorConfig } from '@Config/server'
 import { initController } from '@Config/controller'
+import { ContainerGlobal } from '@Config/inversify'
 import { registerContainer } from '@Config/inversify'
 import { initCollections } from '@Config/collections'
-import { initSocket } from '@Config/socket'
-import { subscribeRabbitMQ } from '@Config/subscribeRabbitMQ'
 import { registerRoutes } from '@Config/registerRoutes'
+import { subscribeRabbitMQ } from '@Config/subscribeRabbitMQ'
 
 const Bootstrap = async () => {
 
@@ -23,6 +24,7 @@ const Bootstrap = async () => {
     await registerContainer()
     await initCollections()
     await initController()
+    await initJobs()
     await subscribeRabbitMQ()
 
     const rootPath = `/api/${PREFIX}`
