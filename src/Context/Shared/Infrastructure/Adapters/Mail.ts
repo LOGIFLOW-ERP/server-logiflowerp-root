@@ -28,8 +28,8 @@ export class AdapterMail {
     async send(
         recipients: string | string[],
         subject: string,
-        plaintextMessage: string | Buffer<ArrayBufferLike> | undefined,
-        HTMLMessage: string | Buffer<ArrayBufferLike> | undefined
+        plaintextMessage?: string | Buffer<ArrayBufferLike>,
+        HTMLMessage?: string | Buffer<ArrayBufferLike>
     ) {
         try {
             const info = await this.transporter.sendMail({

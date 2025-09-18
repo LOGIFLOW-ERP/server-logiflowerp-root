@@ -8,7 +8,8 @@ import {
     response
 } from 'inversify-express-utils'
 import {
-    UseCaseSave
+    UseCaseSave,
+    UseCaseUpdateConsumed
 } from '../Application'
 import {
     validateRequestBody as VRB
@@ -19,6 +20,7 @@ import { DataRequestSave } from '../Domain'
 export class RootToaOrderController extends BaseHttpController {
     constructor(
         @inject(TOA_ORDER_TYPES.UseCaseSave) private readonly useCaseSave: UseCaseSave,
+        @inject(TOA_ORDER_TYPES.UseCaseUpdateConsumed) private readonly useCaseUpdateConsumed: UseCaseUpdateConsumed,
     ) {
         super()
     }
@@ -26,6 +28,12 @@ export class RootToaOrderController extends BaseHttpController {
     @httpPost('save', VRB.bind(null, DataRequestSave, BRE))
     private async save(@request() req: Request, @response() res: Response) {
         await this.useCaseSave.exec(req.body)
+        res.sendStatus(204)
+    }
+
+    @httpPost('update-consumed')
+    private async updateConsumed(@request() req: Request, @response() res: Response) {
+        this.useCaseUpdateConsumed.exec()
         res.sendStatus(204)
     }
 }

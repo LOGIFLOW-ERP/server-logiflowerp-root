@@ -29,6 +29,12 @@ export interface IMongoRepository<T extends Document> {
     deleteMany(filter: Filter<T>): Promise<WithId<T>[]>
     deleteOne(filter: Filter<T>): Promise<WithId<T>>
     executeTransactionBatch<R>(transactions: ITransaction<T>[]): Promise<R[]>
+    validateAvailableEmployeeStocks({ pipeline, _ids }: { pipeline?: Document[]; _ids?: string[]; }, database?: string): Promise<{
+        keySearch: string;
+        keyDetail: string;
+        identity: string;
+        available: number;
+    }[]>
     /**
      * Ejecuta una agregación sobre una colección MongoDB y memoriza el resultado en Redis.
      * Si existe una entrada cacheada en Redis para la combinación de base de datos, colección y pipeline,

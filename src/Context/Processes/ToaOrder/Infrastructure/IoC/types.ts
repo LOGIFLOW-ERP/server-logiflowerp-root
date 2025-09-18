@@ -1,6 +1,7 @@
 export const TOA_ORDER_TYPES = {
+    DB: Symbol(`DB`),
+    Collection: Symbol(`Collection`),
     RepositoryMongo: Symbol(`RepositoryMongo`),
     UseCaseSave: Symbol(`UseCaseSave`),
-    Collection: Symbol(`Collection`),
-    DB: Symbol(`DB`),
+    UseCaseUpdateConsumed: Symbol(`UseCaseUpdateConsumed`),
 }
