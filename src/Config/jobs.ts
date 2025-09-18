@@ -1,13 +1,14 @@
 import { globSync } from 'fs'
 import { join, resolve } from 'path'
 import { env } from './env'
+import { ContainerGlobal } from './inversify'
 
 async function _initJobs(paths: any[]) {
   const managers: any[] = []
   for (const rute of paths) {
     const newPath = join(__dirname, '../', `${rute.parentPath.split('src').pop()}/${rute.name}`)
     const { Job } = await import(newPath)
-    new Job()
+    ContainerGlobal.resolve<any>(Job)
   }
   return managers
 }

@@ -21,6 +21,7 @@ export const env = {
     ADMINISTRATOR_EMAILS: get('ADMINISTRATOR_EMAILS').required().asArray(),
     TOA_EXECUTION_HOUR: get('TOA_EXECUTION_HOUR').required().asIntPositive(),
     TOA_EXECUTION_MINUTE: get('TOA_EXECUTION_MINUTE').required().asIntPositive(),
+    HOST_API_SCRAPER: get('HOST_API_SCRAPER').required().asUrlString(),
 }
 
 export type typeEnv = typeof env

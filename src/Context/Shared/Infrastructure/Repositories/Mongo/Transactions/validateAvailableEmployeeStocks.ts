@@ -25,7 +25,7 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
     }
 
     const _pipeline = _ids ? [{ $match: { _id: { $in: _ids } } }] : pipeline
-    const dataEmployeeStock = await colEmployeeStock.aggregate<EmployeeStockENTITY>(_pipeline).toArray()
+    const dataEmployeeStock = await colEmployeeStock.aggregate<EmployeeStockENTITY>(_pipeline, { readPreference: 'primary' }).toArray()
     const keys = dataEmployeeStock.reduce((acc: { keysDetail: string[]; keysSearch: string[], identities: string[] }, el) => {
         acc.keysDetail.push(el.keyDetail)
         acc.keysSearch.push(el.keySearch)
@@ -71,7 +71,7 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
     // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
     // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
 
-    const dataTransit = await colWarehouseReturn.aggregate(pipelineWarehouseReturns).toArray()
+    const dataTransit = await colWarehouseReturn.aggregate(pipelineWarehouseReturns, { readPreference: 'primary' }).toArray()
 
     const transitMap = new Map<string, number>()
     for (const item of dataTransit) {

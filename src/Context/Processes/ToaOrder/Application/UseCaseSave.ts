@@ -113,7 +113,7 @@ export class UseCaseSave {
                     toInsert.push(order)
                 }
 
-                if (order.estado_actividad === 'Completado') {
+                if (order.estado_actividad === 'Completado' && !exist) {
                     toTTL.push({
                         _id: crypto.randomUUID(),
                         createdAt: new Date(),
@@ -125,7 +125,8 @@ export class UseCaseSave {
                             ...order,
                             _id: crypto.randomUUID(),
                             state: StateInventory.PENDIENTE,
-                            isDeleted: false
+                            isDeleted: false,
+                            stock_quantity_employee: []
                         } as any
                         const entity = await validateCustom(obj, TOAOrderStockENTITY, UnprocessableEntityException)
                         toToaOrderStock.push(entity)
