@@ -25,6 +25,7 @@ declare global {
         collection?: string
         transaction: keyof IMapTransaction
         doc?: OptionalUnlessRequiredId<T>
+        docs?: OptionalUnlessRequiredId<T>[]
         filter?: Filter<T>
         update?: T[] | UpdateFilter<T>
     }

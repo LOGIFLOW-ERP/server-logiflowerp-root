@@ -3,9 +3,20 @@ import { IMapTransaction, IMongoRepository } from '@Shared/Domain'
 import { AdapterMongoDB, AdapterRedis, SHARED_TYPES } from '@Shared/Infrastructure'
 import { Request, Response } from 'express'
 import { Document, Filter, OptionalUnlessRequiredId, UpdateFilter } from 'mongodb'
-import { _deleteMany, _deleteOne, _find, _insertMany, _insertOne, _queryMongoWithRedisMemo, _select, _selectOne, _updateOne } from './Transactions'
+import {
+    _deleteMany,
+    _deleteOne,
+    _find,
+    _insertMany,
+    _insertOne,
+    _queryMongoWithRedisMemo,
+    _select,
+    _selectOne,
+    _updateOne,
+    _validateAvailableEmployeeStocks
+} from './Transactions'
 import { BadRequestException } from '@Config/exception'
-import { AuthUserDTO } from 'logiflowerp-sdk'
+import { AuthUserDTO, collections } from 'logiflowerp-sdk'
 
 export class MongoRepository<T extends Document> implements IMongoRepository<T> {
 
@@ -43,6 +54,16 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
         const client = await this.adapterMongo.connection()
         const col = client.db(database).collection(collection)
         return await _select<ReturnType>({ collection: col, pipeline: finalPipeline })
+    }
+
+    async validateAvailableEmployeeStocks({ pipeline, _ids }: { pipeline?: Document[]; _ids?: string[] }, database: string = this.database) {
+        // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
+        // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
+        // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
+        const client = await this.adapterMongo.connection()
+        const colEmployeeStock = client.db(database).collection(collections.employeeStock)
+        const colWarehouseReturn = client.db(database).collection(collections.warehouseReturn)
+        return _validateAvailableEmployeeStocks({ colEmployeeStock, colWarehouseReturn, pipeline, _ids })
     }
 
     async selectOne<ReturnType extends Document = T>(pipeline: Document[], collection: string = this.collection, database: string = this.database) {
@@ -166,7 +187,8 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
             await this.adapterMongo.openTransaction(session)
             const mapTransaction: IMapTransaction = {
                 insertOne: _insertOne,
-                updateOne: _updateOne
+                updateOne: _updateOne,
+                insertMany: _insertMany
             }
             for (const transaction of transactions) {
                 if (!mapTransaction[transaction.transaction]) {
@@ -182,6 +204,7 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
                     col,
                     session,
                     doc: transaction.doc,
+                    docs: transaction.docs,
                     filter: filterWithDeleted,
                     update: transaction.update,
                     user: this.user

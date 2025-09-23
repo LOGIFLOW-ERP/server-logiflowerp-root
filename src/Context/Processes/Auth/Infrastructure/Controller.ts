@@ -11,6 +11,7 @@ import {
     UseCaseChangePassword,
     UseCaseGetSystemOptionRoot,
     UseCaseGetToken,
+    UseCaseGetTokenApp,
     UseCaseRequestPasswordReset,
     UseCaseResendMailRegisterUser,
     UseCaseResetPassword,
@@ -43,6 +44,7 @@ export class RootAuthController extends BaseHttpController {
         @inject(AUTH_TYPES.UseCaseRequestPasswordReset) private readonly useCaseRequestPasswordReset: UseCaseRequestPasswordReset,
         @inject(AUTH_TYPES.UseCaseResetPassword) private readonly useCaseResetPassword: UseCaseResetPassword,
         @inject(AUTH_TYPES.UseCaseGetToken) private readonly useCaseGetToken: UseCaseGetToken,
+        @inject(AUTH_TYPES.UseCaseGetTokenApp) private readonly useCaseGetTokenApp: UseCaseGetTokenApp,
         @inject(AUTH_TYPES.UseCaseSignIn) private readonly useCaseSignIn: UseCaseSignIn,
         @inject(AUTH_TYPES.UseCaseChangePassword) private readonly useCaseChangePassword: UseCaseChangePassword,
         @inject(AUTH_TYPES.UseCaseGetSystemOptionRoot) private readonly useCaseGetSystemOptionRoot: UseCaseGetSystemOptionRoot,
@@ -127,5 +129,11 @@ export class RootAuthController extends BaseHttpController {
         }
         await this.adapterRabbitMQ.publish({ queue: getQueueNameMailRegisterUser({ NODE_ENV: this.env.NODE_ENV, PREFIX: this.env.PREFIX }), message })
         res.status(201).json(newDoc)
+    }
+
+    @httpPost('get-token-app')
+    private async getTokenApp(@request() req: Request, @response() res: Response) {
+        const { token } = await this.useCaseGetTokenApp.exec(req.user)
+        res.status(201).json({ token })
     }
 }
