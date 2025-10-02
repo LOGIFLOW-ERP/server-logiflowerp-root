@@ -280,7 +280,7 @@ export class UseCaseUpdateConsumed {
                     keySearch: employeeStock.keySearch,
                     keyDetail: employeeStock.keyDetail,
                     serial: toaOrderStock.serial,
-                    state: StateStockSerialEmployee.POSESION,
+                    state: StateStockSerialEmployee.POSESION, // o Reservado_consumo
                     isDeleted: false
                 }
             }]
