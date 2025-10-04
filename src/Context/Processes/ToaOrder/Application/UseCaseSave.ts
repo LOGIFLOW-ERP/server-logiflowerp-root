@@ -124,7 +124,8 @@ export class UseCaseSave {
                             ...inv,
                             ...order,
                             _id: crypto.randomUUID(),
-                            state: StateInventory.PENDIENTE,
+                            state_consumption: StateInventory.PENDIENTE,
+                            state_replacement: StateInventory.PENDIENTE,
                             isDeleted: false,
                             stock_quantity_employee: []
                         } as any
@@ -145,7 +146,7 @@ export class UseCaseSave {
 
             if (toTTL.length) {
                 transactions.push({
-                    collection: collections.requestNumberTTL,
+                    collection: collections.toaRequestNumberTTL,
                     transaction: 'insertMany',
                     docs: toTTL
                 })

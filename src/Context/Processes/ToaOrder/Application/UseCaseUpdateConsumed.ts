@@ -71,7 +71,7 @@ export class UseCaseUpdateConsumed {
     private async processByCompany(company: RootCompanyENTITY, indexCompany: number, companiesLength: number) {
         const pipelineToaOrdersStock = [{
             $match: {
-                state: StateInventory.PENDIENTE,
+                state_consumption: StateInventory.PENDIENTE,
                 isDeleted: false
             }
         }]
@@ -141,7 +141,7 @@ export class UseCaseUpdateConsumed {
                     filter: { _id: toaOrderStock._id },
                     update: {
                         $set: {
-                            state: StateInventory.PROCESADO,
+                            state_consumption: StateInventory.PROCESADO,
                             stock_quantity_employee
                         }
                     }
@@ -198,7 +198,7 @@ export class UseCaseUpdateConsumed {
                         filter: { _id: toaOrderStock._id },
                         update: {
                             $set: {
-                                state: StateInventory.PROCESADO,
+                                state_consumption: StateInventory.PROCESADO,
                                 stock_quantity_employee
                             }
                         }
@@ -248,7 +248,7 @@ export class UseCaseUpdateConsumed {
                         filter: { _id: toaOrderStock._id },
                         update: {
                             $set: {
-                                state: StateInventory.PROCESADO,
+                                state_consumption: StateInventory.PROCESADO,
                                 stock_quantity_employee
                             }
                         }
