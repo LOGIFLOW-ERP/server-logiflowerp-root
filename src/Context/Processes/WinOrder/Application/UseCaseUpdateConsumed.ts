@@ -1,13 +1,12 @@
 import { inject, injectable } from 'inversify'
-import { TOA_ORDER_TYPES } from '../Infrastructure/IoC/types'
-import { ITOAOrderMongoRepository } from '../Domain'
+import { WIN_ORDER_TYPES } from '../Infrastructure/IoC/types'
+import { IWINOrderMongoRepository } from '../Domain'
 import {
     collections,
     EmployeeStockENTITY,
     EmployeeStockSerialENTITY,
     ProducType,
     RootCompanyENTITY,
-    ScrapingSystem,
     State,
     StateInventory,
     StateStockSerialEmployee,
@@ -21,7 +20,7 @@ import { CONFIG_TYPES } from '@Config/types'
 @injectable()
 export class UseCaseUpdateConsumed {
     constructor(
-        @inject(TOA_ORDER_TYPES.RepositoryMongo) private readonly repository: ITOAOrderMongoRepository,
+        @inject(WIN_ORDER_TYPES.RepositoryMongo) private readonly repository: IWINOrderMongoRepository,
         @inject(SHARED_TYPES.AdapterMail) private readonly adapterMail: AdapterMail,
         @inject(CONFIG_TYPES.Env) private readonly env: Env,
     ) { }
@@ -29,7 +28,7 @@ export class UseCaseUpdateConsumed {
     async exec() {
         console.info('🚀 Inicio UpdateConsumed')
         try {
-            const pipeline = [{ $match: { 'scrapingTargets.system': ScrapingSystem.TOA, state: State.ACTIVO, isDeleted: false } }]
+            const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
             const companies = await this.repository.select<RootCompanyENTITY>(pipeline, collections.company)
 
             if (!companies.length) {

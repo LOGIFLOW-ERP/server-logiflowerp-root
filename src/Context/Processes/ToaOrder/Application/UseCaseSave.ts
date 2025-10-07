@@ -6,6 +6,7 @@ import {
     EmployeeENTITY,
     RequestNumberTTLENTITY,
     RootCompanyENTITY,
+    ScrapingSystem,
     State,
     StateInventory,
     TOAOrderENTITY,
@@ -27,7 +28,7 @@ export class UseCaseSave {
     }
 
     private getActiveCompanies() {
-        const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
+        const pipeline = [{ $match: { 'scrapingTargets.system': ScrapingSystem.TOA, state: State.ACTIVO, isDeleted: false } }]
         return this.repository.select<RootCompanyENTITY>(
             pipeline,
             collections.company
@@ -35,7 +36,7 @@ export class UseCaseSave {
     }
 
     private async groupOrdersByCompany(data: TOAOrderENTITY[], companies: RootCompanyENTITY[]) {
-        const orderMap = new Map<number, TOAOrderENTITY[]>()
+        const orderMap = new Map<string, TOAOrderENTITY[]>()
         for (const order of data) {
             if (!orderMap.has(order.toa_resource_id)) {
                 orderMap.set(order.toa_resource_id, [])
@@ -54,7 +55,7 @@ export class UseCaseSave {
                 company.code
             )
 
-            const toa_resource_ids = new Set(personal.map(e => e.toa_resource_id))
+            const toa_resource_ids = new Set(personal.flatMap(e => e.resourceSystem.filter(el => el.system === ScrapingSystem.TOA).map(el => el.resource_id)))
 
             const companyOrders: TOAOrderENTITY[] = []
             for (const id of toa_resource_ids) {
