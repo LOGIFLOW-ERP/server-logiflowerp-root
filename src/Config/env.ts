@@ -16,11 +16,15 @@ export const env = {
     SMTP_PORT: get('SMTP_PORT').required().asInt(),
     SMTP_SECURE: get('SMTP_SECURE').required().asBoolStrict(),
     JOBS: get('JOBS').required().asBoolStrict(),
+    JOB_TOA: get('JOB_TOA').required().asBoolStrict(),
+    JOB_WIN: get('JOB_WIN').required().asBoolStrict(),
     DNI_LOOKUP_API_URL: get('DNI_LOOKUP_API_URL').required().asUrlString(),
     DNI_LOOKUP_API_TOKEN: get('DNI_LOOKUP_API_TOKEN').required().asString(),
     ADMINISTRATOR_EMAILS: get('ADMINISTRATOR_EMAILS').required().asArray(),
     TOA_EXECUTION_HOUR: get('TOA_EXECUTION_HOUR').required().asIntPositive(),
     TOA_EXECUTION_MINUTE: get('TOA_EXECUTION_MINUTE').required().asIntPositive(),
+    WIN_EXECUTION_HOUR: get('WIN_EXECUTION_HOUR').required().asIntPositive(),
+    WIN_EXECUTION_MINUTE: get('WIN_EXECUTION_MINUTE').required().asIntPositive(),
     HOST_API_SCRAPER: get('HOST_API_SCRAPER').required().asUrlString(),
 }
 

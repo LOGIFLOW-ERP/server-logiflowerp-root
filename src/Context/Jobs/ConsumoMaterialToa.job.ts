@@ -9,6 +9,10 @@ export class Job {
 		@inject(SHARED_TYPES.AdapterMail) private readonly adapterMail: AdapterMail,
 		@inject(CONFIG_TYPES.Env) private readonly env: Env,
 	) {
+		if (!env.JOB_TOA) {
+			return
+		}
+		console.log(`Se programó job TOA`)
 		schedule(`${env.TOA_EXECUTION_MINUTE ?? '0'} ${env.TOA_EXECUTION_HOUR ?? '0'} * * *`, this._exec.bind(this))
 	}
 
@@ -25,11 +29,11 @@ export class Job {
 		} catch (error) {
 			console.error(error)
 			const plaintextMessage = (error as Error).message
-			const subject = `¡Error al iniciar ejecucion Job UpdateConsumed!`
+			const subject = `¡Error al iniciar ejecucion Job TOA UpdateConsumed!`
 			try {
 				await this.adapterMail.send(this.env.ADMINISTRATOR_EMAILS, subject, plaintextMessage)
 			} catch (error) {
-				console.error('🔴🔴🔴 ERROR LA ENVIAR CORREO 🔴🔴🔴', error)
+				console.error('🔴🔴🔴 ERROR LA ENVIAR CORREO TOA 🔴🔴🔴', error)
 			}
 		}
 	}
