@@ -42,6 +42,7 @@ export class UseCaseSave {
             const exist = ordersMap.get(order.numero_de_peticion)
 
             if (exist) {
+                order.inventory = exist.inventory
                 if (exist.estado !== StateOrderWin.FINALIZADA) {
                     transactions.push({
                         database: codeCompany,
@@ -70,7 +71,7 @@ export class UseCaseSave {
                 toInsert.push(order)
             }
 
-            if (order.estado === StateOrderWin.FINALIZADA && !exist) {
+            if (order.estado === StateOrderWin.FINALIZADA) {
                 toTTL.push({
                     _id: crypto.randomUUID(),
                     createdAt: new Date(),

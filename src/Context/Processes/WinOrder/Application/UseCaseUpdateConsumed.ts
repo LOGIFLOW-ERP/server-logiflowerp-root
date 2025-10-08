@@ -3,16 +3,18 @@ import { WIN_ORDER_TYPES } from '../Infrastructure/IoC/types'
 import { IWINOrderMongoRepository } from '../Domain'
 import {
     collections,
+    EmployeeENTITY,
     EmployeeStockENTITY,
     EmployeeStockSerialENTITY,
     ProducType,
     RootCompanyENTITY,
+    ScrapingSystem,
     State,
     StateInventory,
     StateStockSerialEmployee,
     StockQuantityEmployee,
     StockType,
-    TOAOrderStockENTITY
+    WINOrderStockENTITY
 } from 'logiflowerp-sdk'
 import { AdapterMail, SHARED_TYPES } from '@Shared/Infrastructure'
 import { CONFIG_TYPES } from '@Config/types'
@@ -26,7 +28,7 @@ export class UseCaseUpdateConsumed {
     ) { }
 
     async exec() {
-        console.info('🚀 Inicio UpdateConsumed')
+        console.info('🚀 Inicio UpdateConsumed WIN')
         try {
             const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
             const companies = await this.repository.select<RootCompanyENTITY>(pipeline, collections.company)
@@ -41,13 +43,13 @@ export class UseCaseUpdateConsumed {
                 } catch (error) {
                     console.error(error)
                     const plaintextMessage = (error as Error).message
-                    const subject = `¡Error en UpdateConsumed, empresa ${company.code}!`
+                    const subject = `¡Error en UpdateConsumed WIN, empresa ${company.code}!`
                     await this.adapterMail.send(this.env.ADMINISTRATOR_EMAILS, subject, plaintextMessage)
                 }
             }
 
             //#region WebHook
-            const url = `${this.env.HOST_API_SCRAPER}toa`
+            const url = `${this.env.HOST_API_SCRAPER}win`
             const response = await fetch(url, { method: 'POST' })
             if (!response.ok) {
                 const errorText = await response.text()
@@ -57,40 +59,41 @@ export class UseCaseUpdateConsumed {
         } catch (error) {
             console.error(error)
             const plaintextMessage = (error as Error).message
-            const subject = `¡Error en exec UpdateConsumed!`
+            const subject = `¡Error en exec UpdateConsumed WIN!`
             try {
                 await this.adapterMail.send(this.env.ADMINISTRATOR_EMAILS, subject, plaintextMessage)
             } catch (error) {
-                console.error('🔴🔴🔴 ERROR LA ENVIAR CORREO 🔴🔴🔴', error)
+                console.error('🔴🔴🔴 ERROR LA ENVIAR CORREO WIN 🔴🔴🔴', error)
             }
         } finally {
-            console.info('🚀 Fin UpdateConsumed')
+            console.info('🚀 Fin UpdateConsumed WIN')
         }
     }
 
     private async processByCompany(company: RootCompanyENTITY, indexCompany: number, companiesLength: number) {
-        const pipelineToaOrdersStock = [{
+        const pipelineOrdersStock = [{
             $match: {
                 state_consumption: StateInventory.PENDIENTE,
                 invpool: 'install',
                 isDeleted: false
             }
         }]
-        const toaOrderStocks = await this.repository.select<TOAOrderStockENTITY>(
-            pipelineToaOrdersStock,
-            collections.toaOrderStock,
+        const orderStocks = await this.repository.select<WINOrderStockENTITY>(
+            pipelineOrdersStock,
+            collections.winOrderStock,
             company.code
         )
 
-        if (!toaOrderStocks.length && companiesLength === 1) {
+        if (!orderStocks.length && companiesLength === 1) {
             await this.wait(30000)
         }
 
-        for (const [indexToaOrderStock, toaOrderStock] of toaOrderStocks.sort((a, b) => b.quantity - a.quantity).entries()) {
+        for (const [indexOrderStock, orderStock] of orderStocks.sort((a, b) => b.quantity - a.quantity).entries()) {
+            const personel = await this.searchPersonel(orderStock, company)
             const pipelineEmployeeStock = [{
                 $match: {
-                    'employee.toa_resource_id': toaOrderStock.toa_resource_id,
-                    'item.itemCode': toaOrderStock.itemCode,
+                    'employee.identity': personel.identity,
+                    'item.itemCode': orderStock.itemCode,
                     stockType: StockType.NUEVO,
                     state: State.ACTIVO,
                     isDeleted: false
@@ -106,10 +109,10 @@ export class UseCaseUpdateConsumed {
 
             if (
                 employeeStocks[0].item.producType === ProducType.SERIE &&
-                toaOrderStock.quantity !== 1 &&
-                toaOrderStock.serial.length === 0
+                orderStock.quantity !== 1 &&
+                orderStock.serial.length === 0
             ) {
-                throw new Error(`Toa order stock ${toaOrderStock._id} es inconsistente.`)
+                throw new Error(`WIN order stock ${orderStock._id} es inconsistente.`)
             }
 
             if (employeeStocks.length === 1) {
@@ -121,25 +124,25 @@ export class UseCaseUpdateConsumed {
 
                 await this.createAndExecuteTransactions(
                     employeeStocks[0],
-                    toaOrderStock,
+                    orderStock,
                     company,
-                    toaOrderStock.quantity,
+                    orderStock.quantity,
                     transactions,
                     stock_quantity_employee
                 )
 
-                if (toaOrderStock.quantity > 0) {
+                if (orderStock.quantity > 0) {
                     if (employeeStocks[0].item.producType === ProducType.SERIE) {
                         continue
                     }
-                    throw new Error(`No se pudo distribuir la cantidad total del toa order stock ${toaOrderStock._id}`)
+                    throw new Error(`No se pudo distribuir la cantidad total del win order stock ${orderStock._id}`)
                 }
 
-                const transactionTOAOrderStock: ITransaction<TOAOrderStockENTITY> = {
+                const transactionOrderStock: ITransaction<WINOrderStockENTITY> = {
                     database: company.code,
-                    collection: collections.toaOrderStock,
+                    collection: collections.winOrderStock,
                     transaction: 'updateOne',
-                    filter: { _id: toaOrderStock._id },
+                    filter: { _id: orderStock._id },
                     update: {
                         $set: {
                             state_consumption: StateInventory.PROCESADO,
@@ -147,7 +150,7 @@ export class UseCaseUpdateConsumed {
                         }
                     }
                 }
-                transactions.push(transactionTOAOrderStock)
+                transactions.push(transactionOrderStock)
 
                 await this.repository.executeTransactionBatch(transactions)
             } else {
@@ -171,32 +174,32 @@ export class UseCaseUpdateConsumed {
                 const transactions: ITransaction<any>[] = []
                 const stock_quantity_employee: StockQuantityEmployee[] = []
 
-                const searchMatch = data.find(e => e.available === toaOrderStock.quantity)
+                const searchMatch = data.find(e => e.available === orderStock.quantity)
                 if (searchMatch) {
                     const available = await this.repository.validateAvailableEmployeeStocks({ _ids: [searchMatch._id] }, company.code)
                     if (available[0].available < 1) { continue }
 
                     await this.createAndExecuteTransactions(
                         searchMatch,
-                        toaOrderStock,
+                        orderStock,
                         company,
-                        toaOrderStock.quantity,
+                        orderStock.quantity,
                         transactions,
                         stock_quantity_employee
                     )
 
-                    if (toaOrderStock.quantity > 0) {
+                    if (orderStock.quantity > 0) {
                         if (searchMatch.item.producType === ProducType.SERIE) {
                             continue
                         }
-                        throw new Error(`No se pudo distribuir la cantidad total del toa order stock ${toaOrderStock._id}`)
+                        throw new Error(`No se pudo distribuir la cantidad total del win order stock ${orderStock._id}`)
                     }
 
-                    const transactionTOAOrderStock: ITransaction<TOAOrderStockENTITY> = {
+                    const transactionOrderStock: ITransaction<WINOrderStockENTITY> = {
                         database: company.code,
-                        collection: collections.toaOrderStock,
+                        collection: collections.winOrderStock,
                         transaction: 'updateOne',
-                        filter: { _id: toaOrderStock._id },
+                        filter: { _id: orderStock._id },
                         update: {
                             $set: {
                                 state_consumption: StateInventory.PROCESADO,
@@ -204,29 +207,29 @@ export class UseCaseUpdateConsumed {
                             }
                         }
                     }
-                    transactions.push(transactionTOAOrderStock)
+                    transactions.push(transactionOrderStock)
 
                     await this.repository.executeTransactionBatch(transactions)
                 } else {
                     for (const [i, employeeStock] of data.sort((a, b) => b.available - a.available).entries()) {
-                        if (toaOrderStock.quantity < 1) { break }
+                        if (orderStock.quantity < 1) { break }
 
                         const available = await this.repository.validateAvailableEmployeeStocks({ _ids: [employeeStock._id] }, company.code)
                         if (available[0].available < 1) { continue }
 
-                        if (toaOrderStock.quantity <= available[0].available || i === data.length - 1) {
+                        if (orderStock.quantity <= available[0].available || i === data.length - 1) {
                             await this.createAndExecuteTransactions(
                                 employeeStock,
-                                toaOrderStock,
+                                orderStock,
                                 company,
-                                toaOrderStock.quantity,
+                                orderStock.quantity,
                                 transactions,
                                 stock_quantity_employee
                             )
                         } else {
                             await this.createAndExecuteTransactions(
                                 employeeStock,
-                                toaOrderStock,
+                                orderStock,
                                 company,
                                 available[0].available,
                                 transactions,
@@ -235,18 +238,18 @@ export class UseCaseUpdateConsumed {
                         }
                     }
 
-                    if (toaOrderStock.quantity > 0) {
+                    if (orderStock.quantity > 0) {
                         if (employeeStocks[0].item.producType === ProducType.SERIE) {
                             continue
                         }
-                        throw new Error(`No se pudo distribuir la cantidad total del toa order stock ${toaOrderStock._id}`)
+                        throw new Error(`No se pudo distribuir la cantidad total del win order stock ${orderStock._id}`)
                     }
 
-                    const transactionTOAOrderStock: ITransaction<TOAOrderStockENTITY> = {
+                    const transactionOrderStock: ITransaction<WINOrderStockENTITY> = {
                         database: company.code,
-                        collection: collections.toaOrderStock,
+                        collection: collections.winOrderStock,
                         transaction: 'updateOne',
-                        filter: { _id: toaOrderStock._id },
+                        filter: { _id: orderStock._id },
                         update: {
                             $set: {
                                 state_consumption: StateInventory.PROCESADO,
@@ -255,19 +258,19 @@ export class UseCaseUpdateConsumed {
                         }
                     }
 
-                    transactions.push(transactionTOAOrderStock)
+                    transactions.push(transactionOrderStock)
 
                     await this.repository.executeTransactionBatch(transactions)
                 }
             }
 
-            console.info(`Procesado ${indexCompany + 1}/${companiesLength} empresas (${company.code}), procesado ${indexToaOrderStock + 1}/${toaOrderStocks.length} toa orden stock`)
+            console.info(`Procesado ${indexCompany + 1}/${companiesLength} empresas (${company.code}), procesado ${indexOrderStock + 1}/${orderStocks.length} win orden stock`)
         }
     }
 
     private async createAndExecuteTransactions(
         employeeStock: EmployeeStockENTITY,
-        toaOrderStock: TOAOrderStockENTITY,
+        orderStock: WINOrderStockENTITY,
         company: RootCompanyENTITY,
         amountConsumed: number,
         transactions: ITransaction<any>[],
@@ -280,8 +283,8 @@ export class UseCaseUpdateConsumed {
                     identity: employeeStock.employee.identity,
                     keySearch: employeeStock.keySearch,
                     keyDetail: employeeStock.keyDetail,
-                    serial: toaOrderStock.serial,
-                    state: StateStockSerialEmployee.POSESION, // o Reservado_consumo
+                    serial: orderStock.serial,
+                    state: StateStockSerialEmployee.RESERVADO_CONSUMO_WIN, // posesion o Reservado_consumo
                     isDeleted: false
                 }
             }]
@@ -309,7 +312,7 @@ export class UseCaseUpdateConsumed {
                 update: {
                     $set: {
                         state: StateStockSerialEmployee.CONSUMIDO,
-                        documentNumber: toaOrderStock.numero_de_peticion,
+                        documentNumber: orderStock.numero_de_peticion,
                         updatedate: new Date()
                     }
                 }
@@ -327,7 +330,7 @@ export class UseCaseUpdateConsumed {
             }
         }
         transactions.push(transactionEmployeeStock)
-        toaOrderStock.quantity -= amountConsumed
+        orderStock.quantity -= amountConsumed
         const _item = new StockQuantityEmployee()
         _item._id_stock_employee = employeeStock._id
         _item.quantity = amountConsumed
@@ -338,5 +341,17 @@ export class UseCaseUpdateConsumed {
         console.log(`⌛ Esperando ${ms / 1000}s ...`)
         await new Promise((resolve) => setTimeout(resolve, ms))
         console.log(`⌛ Fin espera ${ms / 1000}s`)
+    }
+
+    private searchPersonel(orderStock: WINOrderStockENTITY, company: RootCompanyENTITY) {
+        const pipeline = [{
+            $match: {
+                'resourceSystem.resource_id': orderStock.resource_id,
+                'resourceSystem.system': ScrapingSystem.WIN,
+                isDeleted: false,
+                state: State.ACTIVO
+            }
+        }]
+        return this.repository.selectOne<EmployeeENTITY>(pipeline, collections.employee, company.code)
     }
 }
