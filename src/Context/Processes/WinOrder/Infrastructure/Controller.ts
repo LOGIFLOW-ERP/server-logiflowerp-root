@@ -14,14 +14,14 @@ import {
 import {
     validateRequestBody as VRB
 } from 'logiflowerp-sdk'
-import { TOA_ORDER_TYPES } from './IoC/types'
+import { WIN_ORDER_TYPES } from './IoC/types'
 import { DataRequestSave } from '../Domain'
 import { CONFIG_TYPES } from '@Config/types'
 
-export class RootToaOrderController extends BaseHttpController {
+export class RootWinOrderController extends BaseHttpController {
     constructor(
-        @inject(TOA_ORDER_TYPES.UseCaseSave) private readonly useCaseSave: UseCaseSave,
-        @inject(TOA_ORDER_TYPES.UseCaseUpdateConsumed) private readonly useCaseUpdateConsumed: UseCaseUpdateConsumed,
+        @inject(WIN_ORDER_TYPES.UseCaseSave) private readonly useCaseSave: UseCaseSave,
+        @inject(WIN_ORDER_TYPES.UseCaseUpdateConsumed) private readonly useCaseUpdateConsumed: UseCaseUpdateConsumed,
         @inject(CONFIG_TYPES.Env) private readonly env: Env,
     ) {
         super()
@@ -29,7 +29,7 @@ export class RootToaOrderController extends BaseHttpController {
 
     @httpPost('save', VRB.bind(null, DataRequestSave, BRE))
     private async save(@request() req: Request, @response() res: Response) {
-        if (!this.env.JOB_TOA) {
+        if (!this.env.JOB_WIN) {
             throw new ServiceUnavailableException('El servicio de rastreo no está disponible')
         }
         await this.useCaseSave.exec(req.body)
@@ -38,7 +38,7 @@ export class RootToaOrderController extends BaseHttpController {
 
     @httpPost('update-consumed')
     private async updateConsumed(@request() req: Request, @response() res: Response) {
-        if (!this.env.JOB_TOA) {
+        if (!this.env.JOB_WIN) {
             throw new ServiceUnavailableException('El servicio de rastreo no está disponible')
         }
         this.useCaseUpdateConsumed.exec()
