@@ -9,7 +9,7 @@ import {
 } from 'inversify-express-utils'
 import {
     UseCaseSave,
-    UseCaseUpdateConsumed
+    // UseCaseUpdateConsumed
 } from '../Application'
 import {
     validateRequestBody as VRB
@@ -21,7 +21,7 @@ import { CONFIG_TYPES } from '@Config/types'
 export class RootWinOrderController extends BaseHttpController {
     constructor(
         @inject(WIN_ORDER_TYPES.UseCaseSave) private readonly useCaseSave: UseCaseSave,
-        @inject(WIN_ORDER_TYPES.UseCaseUpdateConsumed) private readonly useCaseUpdateConsumed: UseCaseUpdateConsumed,
+        // @inject(WIN_ORDER_TYPES.UseCaseUpdateConsumed) private readonly useCaseUpdateConsumed: UseCaseUpdateConsumed,
         @inject(CONFIG_TYPES.Env) private readonly env: Env,
     ) {
         super()
@@ -36,12 +36,12 @@ export class RootWinOrderController extends BaseHttpController {
         res.sendStatus(204)
     }
 
-    @httpPost('update-consumed')
-    private async updateConsumed(@request() req: Request, @response() res: Response) {
-        if (!this.env.JOB_WIN) {
-            throw new ServiceUnavailableException('El servicio de rastreo no está disponible')
-        }
-        this.useCaseUpdateConsumed.exec()
-        res.sendStatus(204)
-    }
+    // @httpPost('update-consumed')
+    // private async updateConsumed(@request() req: Request, @response() res: Response) {
+    //     if (!this.env.JOB_WIN) {
+    //         throw new ServiceUnavailableException('El servicio de rastreo no está disponible')
+    //     }
+    //     this.useCaseUpdateConsumed.exec()
+    //     res.sendStatus(204)
+    // }
 }

@@ -23,8 +23,8 @@ export const env = {
     ADMINISTRATOR_EMAILS: get('ADMINISTRATOR_EMAILS').required().asArray(),
     TOA_EXECUTION_HOUR: get('TOA_EXECUTION_HOUR').required().asIntPositive(),
     TOA_EXECUTION_MINUTE: get('TOA_EXECUTION_MINUTE').required().asIntPositive(),
-    WIN_EXECUTION_HOUR: get('WIN_EXECUTION_HOUR').required().asIntPositive(),
-    WIN_EXECUTION_MINUTE: get('WIN_EXECUTION_MINUTE').required().asIntPositive(),
+    WIN_EXECUTION_START_HOUR: get('WIN_EXECUTION_START_HOUR').required().asIntPositive(),
+    WIN_EXECUTION_END_HOUR: get('WIN_EXECUTION_END_HOUR').required().asIntPositive(),
     HOST_API_SCRAPER: get('HOST_API_SCRAPER').required().asUrlString(),
 }
 

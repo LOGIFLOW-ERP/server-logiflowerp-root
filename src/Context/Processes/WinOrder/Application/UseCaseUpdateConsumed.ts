@@ -30,12 +30,8 @@ export class UseCaseUpdateConsumed {
     async exec() {
         console.info('🚀 Inicio UpdateConsumed WIN')
         try {
-            const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
+            const pipeline = [{ $match: { 'scrapingTargets.system': ScrapingSystem.WIN, state: State.ACTIVO, isDeleted: false } }]
             const companies = await this.repository.select<RootCompanyENTITY>(pipeline, collections.company)
-
-            if (!companies.length) {
-                await this.wait(30000)
-            }
 
             for (const [i, company] of companies.entries()) {
                 try {
@@ -47,15 +43,6 @@ export class UseCaseUpdateConsumed {
                     await this.adapterMail.send(this.env.ADMINISTRATOR_EMAILS, subject, plaintextMessage)
                 }
             }
-
-            //#region WebHook
-            const url = `${this.env.HOST_API_SCRAPER}win`
-            const response = await fetch(url, { method: 'POST' })
-            if (!response.ok) {
-                const errorText = await response.text()
-                throw new Error(`Error ${response.status}: ${errorText}`)
-            }
-            //#endregion WebHook
         } catch (error) {
             console.error(error)
             const plaintextMessage = (error as Error).message
@@ -83,10 +70,6 @@ export class UseCaseUpdateConsumed {
             collections.winOrderStock,
             company.code
         )
-
-        if (!orderStocks.length && companiesLength === 1) {
-            await this.wait(30000)
-        }
 
         for (const [indexOrderStock, orderStock] of orderStocks.sort((a, b) => b.quantity - a.quantity).entries()) {
             const personel = await this.searchPersonel(orderStock, company)
@@ -335,12 +318,6 @@ export class UseCaseUpdateConsumed {
         _item._id_stock_employee = employeeStock._id
         _item.quantity = amountConsumed
         stockQuantityEmployee.push(_item)
-    }
-
-    private async wait(ms: number) {
-        console.log(`⌛ Esperando ${ms / 1000}s ...`)
-        await new Promise((resolve) => setTimeout(resolve, ms))
-        console.log(`⌛ Fin espera ${ms / 1000}s`)
     }
 
     private searchPersonel(orderStock: WINOrderStockENTITY, company: RootCompanyENTITY) {
