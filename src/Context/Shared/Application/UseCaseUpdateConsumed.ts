@@ -14,7 +14,8 @@ import {
     StockType,
     OrderStockENTITY
 } from 'logiflowerp-sdk'
-import { AdapterMail, SHARED_TYPES } from '@Shared/Infrastructure'
+import { SHARED_TYPES } from '@Shared/Infrastructure/IoC/types'
+import { AdapterMail } from '@Shared/Infrastructure'
 import { CONFIG_TYPES } from '@Config/types'
 import { WIN_ORDER_TYPES } from 'src/Context/Processes/WinOrder/Infrastructure/IoC/types'
 import { IWINOrderMongoRepository } from 'src/Context/Processes/WinOrder/Domain'
@@ -28,7 +29,6 @@ export class UseCaseUpdateConsumed {
     ) { }
 
     async exec() {
-        console.info('🚀 Inicio UpdateConsumed')
         const pipeline = [{ $match: { state: State.ACTIVO, isDeleted: false } }]
         const companies = await this.repositoryWINOrder.select<RootCompanyENTITY>(pipeline, collections.company)
 
