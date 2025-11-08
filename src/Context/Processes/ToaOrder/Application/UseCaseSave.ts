@@ -10,7 +10,7 @@ import {
     State,
     StateInventory,
     TOAOrderENTITY,
-    TOAOrderStockENTITY,
+    OrderStockENTITY,
     validateCustom
 } from 'logiflowerp-sdk'
 import { UnprocessableEntityException } from '@Config/exception'
@@ -83,7 +83,7 @@ export class UseCaseSave {
             const transactions: ITransaction<any>[] = []
             const toInsert: TOAOrderENTITY[] = []
             const toTTL: RequestNumberTTLENTITY[] = []
-            const toToaOrderStock: TOAOrderStockENTITY[] = []
+            const toToaOrderStock: OrderStockENTITY[] = []
 
             for (const order of orders) {
                 const exist = ordersMap.get(order.numero_de_peticion)
@@ -130,7 +130,7 @@ export class UseCaseSave {
                             isDeleted: false,
                             stock_quantity_employee: []
                         } as any
-                        const entity = await validateCustom(obj, TOAOrderStockENTITY, UnprocessableEntityException)
+                        const entity = await validateCustom(obj, OrderStockENTITY, UnprocessableEntityException)
                         toToaOrderStock.push(entity)
                     }
                 }

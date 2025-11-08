@@ -3,5 +3,4 @@ export const TOA_ORDER_TYPES = {
     Collection: Symbol(`Collection`),
     RepositoryMongo: Symbol(`RepositoryMongo`),
     UseCaseSave: Symbol(`UseCaseSave`),
-    UseCaseUpdateConsumed: Symbol(`UseCaseUpdateConsumed`),
 }
