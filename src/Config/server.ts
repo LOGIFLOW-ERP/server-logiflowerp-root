@@ -21,7 +21,7 @@ import {
 } from './exception'
 import { ContainerGlobal } from './inversify'
 import { AdapterToken, SHARED_TYPES } from '@Shared/Infrastructure'
-import { convertDates } from 'logiflowerp-sdk'
+import { convertDates, parseDuplicateKeyError } from 'logiflowerp-sdk'
 import { MongoServerError } from 'mongodb'
 
 export async function serverConfig(app: Application, rootPath: string) {
@@ -66,8 +66,8 @@ export function serverErrorConfig(app: Application) {
 
         if (err instanceof MongoServerError) {
             if (err.code === 11000) {
-                delete err.errorResponse.keyValue.isDeleted
-                const msg = `El recurso ya existe (clave duplicada: ${JSON.stringify(err.errorResponse.keyValue)})`
+                const msgDup = parseDuplicateKeyError(err.errorResponse.message ?? '')
+                const msg = `El recurso ya existe (${msgDup})`
                 res.status(409).send(new ConflictException(msg, true))
                 return
             }
