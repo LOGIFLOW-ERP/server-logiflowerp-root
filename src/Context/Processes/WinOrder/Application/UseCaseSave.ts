@@ -66,11 +66,6 @@ export class UseCaseSave {
                     })
                 } else {
                     console.warn(`El estado de la orden ${exist.numero_de_peticion} es ${exist.estado}`)
-                    toTTL.push({
-                        _id: crypto.randomUUID(),
-                        createdAt: new Date(),
-                        numero_de_peticion: order.numero_de_peticion
-                    } as RequestNumberTTLENTITY)
                 }
             } else {
                 toInsert.push(order)
