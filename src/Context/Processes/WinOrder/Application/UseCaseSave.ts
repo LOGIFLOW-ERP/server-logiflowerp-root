@@ -41,8 +41,7 @@ export class UseCaseSave {
             const exist = ordersMap.get(order.numero_de_peticion)
 
             if (exist) {
-                // if (exist.estado !== StateOrderWin.FINALIZADA) {
-                if (true) {
+                if (exist.estado !== StateOrderWin.FINALIZADA) {
                     transactions.push({
                         database: codeCompany,
                         collection: collections.winOrder,
@@ -66,17 +65,17 @@ export class UseCaseSave {
                         }
                     })
                 } else {
-                    // console.warn(`El estado de la orden ${exist.numero_de_peticion} es ${exist.estado}`)
+                    console.warn(`El estado de la orden ${exist.numero_de_peticion} es ${exist.estado}`)
                 }
             } else {
                 toInsert.push(order)
             }
             if (order.estado === StateOrderWin.FINALIZADA) {
-                // toTTL.push({
-                //     _id: crypto.randomUUID(),
-                //     createdAt: new Date(),
-                //     numero_de_peticion: order.numero_de_peticion
-                // } as RequestNumberTTLENTITY)
+                toTTL.push({
+                    _id: crypto.randomUUID(),
+                    createdAt: new Date(),
+                    numero_de_peticion: order.numero_de_peticion
+                } as RequestNumberTTLENTITY)
             }
         }
 
