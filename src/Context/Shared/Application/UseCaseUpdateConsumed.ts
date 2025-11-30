@@ -60,7 +60,7 @@ export class UseCaseUpdateConsumed {
                 collections.winOrderStock,
                 company.code
             )
-            await this._processByCompany(orderStocks, company, collections.winOrderStock, indexCompany, companiesLength, ScrapingSystem.WIN)
+            await this._processByCompany(orderStocks, company, collections.winOrderStock, indexCompany, companiesLength)
         }
 
         // Toa etc
@@ -72,21 +72,27 @@ export class UseCaseUpdateConsumed {
         collection: string,
         indexCompany: number,
         companiesLength: number,
-        system: ScrapingSystem
     ) {
-        const products = await this.searchDataProducts(company)
         for (const [indexOrderStock, orderStock] of orderStocks.entries()) {
-            const personel = await this.searchPersonel(orderStock, company, system)
-            const product = this.searchProduct(orderStock.itemCode, products)
+            const employeeStock = await this.getStockPersonal(orderStock, company)
 
-            const isSerial = product.producType === ProducType.SERIE
+            const transactions: ITransaction<any>[] = []
+
+            const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
+                database: company.code,
+                collection: collections.employeeStock,
+                transaction: 'updateOne',
+                filter: { _id: employeeStock._id },
+                update: {
+                    $inc: { amountConsumed: orderStock.quantity }
+                }
+            }
+            transactions.push(transactionEmployeeStock)
+
+            const isSerial = employeeStock.item.producType === ProducType.SERIE
 
             if (isSerial) {
-                const transactions: ITransaction<any>[] = []
-                const stock_quantity_employee: StockQuantityEmployee[] = []
-
-                const stockPersonalEquipo = await this.getStockPersonalEquipos(personel, orderStock, company)
-
+                const stockPersonalEquipo = await this.getStockPersonalEquipo(employeeStock, orderStock, company)
                 const transaction: ITransaction<EmployeeStockSerialENTITY> = {
                     database: company.code,
                     collection: collections.employeeStockSerial,
@@ -101,88 +107,6 @@ export class UseCaseUpdateConsumed {
                     }
                 }
                 transactions.push(transaction)
-
-                const employeeStock = await this.getStockPersonalAux(personel, company, stockPersonalEquipo)
-
-                const _item = new StockQuantityEmployee()
-                _item.quantity = orderStock.quantity
-                _item._id_stock_employee = employeeStock._id
-                stock_quantity_employee.push(_item)
-
-                const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
-                    database: company.code,
-                    collection: collections.employeeStock,
-                    transaction: 'updateOne',
-                    filter: { _id: employeeStock._id },
-                    update: {
-                        $inc: { amountConsumed: orderStock.quantity }
-                    }
-                }
-                transactions.push(transactionEmployeeStock)
-
-                const transactionOrderStock: ITransaction<OrderStockENTITY> = {
-                    database: company.code,
-                    collection,
-                    transaction: 'updateOne',
-                    filter: { _id: orderStock._id },
-                    update: {
-                        $set: {
-                            state_consumption: StateInventory.PROCESADO,
-                            stock_quantity_employee
-                        }
-                    }
-                }
-                transactions.push(transactionOrderStock)
-                await this.repositoryWINOrder.executeTransactionBatch(transactions)
-                continue
-            }
-
-            const transactions: ITransaction<any>[] = []
-            const stock_quantity_employee: StockQuantityEmployee[] = []
-
-            const employeeStocks = await this.getStockPersonal(personel, orderStock, company)
-            const dataStockPersonalAvailable = await this.addAvailableStockPersonal(employeeStocks, company)
-
-            if (dataStockPersonalAvailable.length) {
-                const searchMatch = dataStockPersonalAvailable.find(e => e.available === orderStock.quantity)
-                if (searchMatch) {
-                    const _item = new StockQuantityEmployee()
-                    _item.quantity = orderStock.quantity
-                    _item._id_stock_employee = searchMatch._id
-
-                    stock_quantity_employee.push(_item)
-                    const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
-                        database: company.code,
-                        collection: collections.employeeStock,
-                        transaction: 'updateOne',
-                        filter: { _id: searchMatch._id },
-                        update: {
-                            $inc: { amountConsumed: orderStock.quantity }
-                        }
-                    }
-                    transactions.push(transactionEmployeeStock)
-                } else {
-                    for (const stockPersonal of dataStockPersonalAvailable) {
-                        if (orderStock.quantity <= 0) { break }
-                        const amountConsumed = Math.min(orderStock.quantity, stockPersonal.available)
-                        const _item = new StockQuantityEmployee()
-                        _item.quantity = amountConsumed
-                        _item._id_stock_employee = stockPersonal._id
-
-                        stock_quantity_employee.push(_item)
-                        const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
-                            database: company.code,
-                            collection: collections.employeeStock,
-                            transaction: 'updateOne',
-                            filter: { _id: stockPersonal._id },
-                            update: {
-                                $inc: { amountConsumed }
-                            }
-                        }
-                        transactions.push(transactionEmployeeStock)
-                        orderStock.quantity -= amountConsumed
-                    }
-                }
             }
 
             const transactionOrderStock: ITransaction<OrderStockENTITY> = {
@@ -192,39 +116,24 @@ export class UseCaseUpdateConsumed {
                 filter: { _id: orderStock._id },
                 update: {
                     $set: {
-                        state_consumption: StateInventory.PROCESADO,
-                        stock_quantity_employee
+                        state_consumption: StateInventory.PROCESADO
                     }
                 }
             }
             transactions.push(transactionOrderStock)
+
             await this.repositoryWINOrder.executeTransactionBatch(transactions)
 
             console.info(`Procesado ${indexCompany + 1}/${companiesLength} empresas (${company.code}), procesado ${indexOrderStock + 1}/${orderStocks.length} orden stock`)
         }
     }
 
-    private async addAvailableStockPersonal(employeeStocks: EmployeeStockENTITY[], company: RootCompanyENTITY) {
-        const availables = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: employeeStocks.map(e => e._id) }, company.code)
-        const data = employeeStocks
-            .map(e => {
-                const stock = availables.filter(el => el.identity === e.employee.identity && el.keyDetail === e.keyDetail && el.keySearch === e.keySearch)
-                if (stock.length !== 1) {
-                    throw new Error(
-                        `Hay ${stock.length} resultados en validateAvailableEmployeeStocks identity: ${e.employee.identity}, keyDetail: ${e.keyDetail}, keySearch: ${e.keySearch}`
-                    )
-                }
-                return { ...e, available: stock[0].available } as EmployeeStockENTITY
-            })
-            .filter(e => e.available > 0)
-        return data
-    }
-
-    private getStockPersonalEquipos(employee: EmployeeENTITY, orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
+    private getStockPersonalEquipo(employeeStock: EmployeeStockENTITY, orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
         const pipeline = [{
             $match: {
-                identity: employee.identity,
-                itemCode: orderStock.itemCode,
+                identity: employeeStock.employee.identity,
+                keyDetail: employeeStock.keyDetail,
+                keySearch: employeeStock.keySearch,
                 serial: orderStock.serial,
                 state: StateStockSerialEmployee.RESERVADO_CONSUMO,
                 isDeleted: false
@@ -237,13 +146,10 @@ export class UseCaseUpdateConsumed {
         )
     }
 
-    private getStockPersonalAux(personel: EmployeeENTITY, company: RootCompanyENTITY, stockPersonalEquipo: EmployeeStockSerialENTITY) {
+    private getStockPersonal(orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
         const pipelineEmployeeStock = [{
             $match: {
-                'employee.identity': personel.identity,
-                keySearch: stockPersonalEquipo.keySearch,
-                keyDetail: stockPersonalEquipo.keyDetail,
-                stockType: StockType.NUEVO,
+                _id: orderStock._id_stock,
                 state: State.ACTIVO,
                 isDeleted: false
             }
@@ -253,52 +159,5 @@ export class UseCaseUpdateConsumed {
             collections.employeeStock,
             company.code
         )
-    }
-
-    private getStockPersonal(personel: EmployeeENTITY, orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
-        const pipelineEmployeeStock = [{
-            $match: {
-                'employee.identity': personel.identity,
-                'item.itemCode': orderStock.itemCode,
-                stockType: StockType.NUEVO,
-                state: State.ACTIVO,
-                isDeleted: false
-            }
-        }]
-        return this.repositoryWINOrder.select<EmployeeStockENTITY>(
-            pipelineEmployeeStock,
-            collections.employeeStock,
-            company.code
-        )
-    }
-
-    private searchPersonel(orderStock: OrderStockENTITY, company: RootCompanyENTITY, system: ScrapingSystem) {
-        const pipeline = [{
-            $match: {
-                'resourceSystem.resource_id': orderStock.resource_id,
-                'resourceSystem.system': system,
-                isDeleted: false,
-                state: State.ACTIVO
-            }
-        }]
-        return this.repositoryWINOrder.selectOne<EmployeeENTITY>(pipeline, collections.employee, company.code)
-    }
-
-    private searchProduct(code: string, products: ProductENTITY[]) {
-        const product = products.find(product => product.itemCode === code)
-        if (!product) {
-            throw new Error(`No se encontro el producto con el codigo ${code}`)
-        }
-        return product
-    }
-
-    private searchDataProducts(company: RootCompanyENTITY) {
-        const pipeline = [{
-            $match: {
-                isDeleted: false,
-                state: State.ACTIVO
-            }
-        }]
-        return this.repositoryWINOrder.select<ProductENTITY>(pipeline, collections.product, company.code)
     }
 }
