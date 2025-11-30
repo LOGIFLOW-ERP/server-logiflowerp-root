@@ -12,7 +12,8 @@ import {
     StateStockSerialEmployee,
     StockQuantityEmployee,
     StockType,
-    OrderStockENTITY
+    OrderStockENTITY,
+    ProductENTITY
 } from 'logiflowerp-sdk'
 import { SHARED_TYPES } from '@Shared/Infrastructure/IoC/types'
 import { AdapterMail } from '@Shared/Infrastructure'
@@ -73,55 +74,51 @@ export class UseCaseUpdateConsumed {
         companiesLength: number,
         system: ScrapingSystem
     ) {
-        for (const [indexOrderStock, orderStock] of orderStocks.sort((a, b) => b.quantity - a.quantity).entries()) {
+        const products = await this.searchDataProducts(company)
+        for (const [indexOrderStock, orderStock] of orderStocks.entries()) {
             const personel = await this.searchPersonel(orderStock, company, system)
-            const pipelineEmployeeStock = [{
-                $match: {
-                    'employee.identity': personel.identity,
-                    'item.itemCode': orderStock.itemCode,
-                    stockType: StockType.NUEVO,
-                    state: State.ACTIVO,
-                    isDeleted: false
-                }
-            }]
-            const employeeStocks = await this.repositoryWINOrder.select<EmployeeStockENTITY>(
-                pipelineEmployeeStock,
-                collections.employeeStock,
-                company.code
-            )
+            const product = this.searchProduct(orderStock.itemCode, products)
 
-            if (employeeStocks.length === 0) { continue }
+            const isSerial = product.producType === ProducType.SERIE
 
-            if (
-                employeeStocks[0].item.producType === ProducType.SERIE &&
-                orderStock.quantity !== 1 &&
-                orderStock.serial.length === 0
-            ) {
-                throw new Error(`order stock ${orderStock._id} es inconsistente.`)
-            }
-
-            if (employeeStocks.length === 1) {
-                const available = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: [employeeStocks[0]._id] }, company.code)
-                if (available[0].available < 1) { continue }
-
+            if (isSerial) {
                 const transactions: ITransaction<any>[] = []
                 const stock_quantity_employee: StockQuantityEmployee[] = []
 
-                await this.createAndExecuteTransactions(
-                    employeeStocks[0],
-                    orderStock,
-                    company,
-                    orderStock.quantity,
-                    transactions,
-                    stock_quantity_employee
-                )
+                const stockPersonalEquipo = await this.getStockPersonalEquipos(personel, orderStock, company)
 
-                if (orderStock.quantity > 0) {
-                    if (employeeStocks[0].item.producType === ProducType.SERIE) {
-                        continue
+                const transaction: ITransaction<EmployeeStockSerialENTITY> = {
+                    database: company.code,
+                    collection: collections.employeeStockSerial,
+                    transaction: 'updateOne',
+                    filter: { _id: stockPersonalEquipo._id },
+                    update: {
+                        $set: {
+                            state: StateStockSerialEmployee.CONSUMIDO,
+                            documentNumber: orderStock.numero_de_peticion,
+                            updatedate: new Date()
+                        }
                     }
-                    throw new Error(`No se pudo distribuir la cantidad total del order stock ${orderStock._id}`)
                 }
+                transactions.push(transaction)
+
+                const employeeStock = await this.getStockPersonalAux(personel, company, stockPersonalEquipo)
+
+                const _item = new StockQuantityEmployee()
+                _item.quantity = orderStock.quantity
+                _item._id_stock_employee = employeeStock._id
+                stock_quantity_employee.push(_item)
+
+                const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
+                    database: company.code,
+                    collection: collections.employeeStock,
+                    transaction: 'updateOne',
+                    filter: { _id: employeeStock._id },
+                    update: {
+                        $inc: { amountConsumed: orderStock.quantity }
+                    }
+                }
+                transactions.push(transactionEmployeeStock)
 
                 const transactionOrderStock: ITransaction<OrderStockENTITY> = {
                     database: company.code,
@@ -136,190 +133,143 @@ export class UseCaseUpdateConsumed {
                     }
                 }
                 transactions.push(transactionOrderStock)
-
                 await this.repositoryWINOrder.executeTransactionBatch(transactions)
-            } else {
-                const availables = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: employeeStocks.map(e => e._id) }, company.code)
-                const data = employeeStocks
-                    .map(e => {
-                        const stock = availables.filter(el => el.identity === e.employee.identity && el.keyDetail === e.keyDetail && el.keySearch === e.keySearch)
-                        if (stock.length !== 1) {
-                            throw new Error(
-                                `Hay ${stock.length} resultados en validateAvailableEmployeeStocks identity: ${e.employee.identity}, keyDetail: ${e.keyDetail}, keySearch: ${e.keySearch}`
-                            )
-                        }
-                        return { ...e, available: stock[0].available } as EmployeeStockENTITY & { available: number }
-                    })
-                    .filter(e => e.available > 0)
+                continue
+            }
 
-                if (data.length === 0) {
-                    continue
-                }
+            const transactions: ITransaction<any>[] = []
+            const stock_quantity_employee: StockQuantityEmployee[] = []
 
-                const transactions: ITransaction<any>[] = []
-                const stock_quantity_employee: StockQuantityEmployee[] = []
+            const employeeStocks = await this.getStockPersonal(personel, orderStock, company)
+            const dataStockPersonalAvailable = await this.addAvailableStockPersonal(employeeStocks, company)
 
-                const searchMatch = data.find(e => e.available === orderStock.quantity)
+            if (dataStockPersonalAvailable.length) {
+                const searchMatch = dataStockPersonalAvailable.find(e => e.available === orderStock.quantity)
                 if (searchMatch) {
-                    const available = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: [searchMatch._id] }, company.code)
-                    if (available[0].available < 1) { continue }
+                    const _item = new StockQuantityEmployee()
+                    _item.quantity = orderStock.quantity
+                    _item._id_stock_employee = searchMatch._id
 
-                    await this.createAndExecuteTransactions(
-                        searchMatch,
-                        orderStock,
-                        company,
-                        orderStock.quantity,
-                        transactions,
-                        stock_quantity_employee
-                    )
-
-                    if (orderStock.quantity > 0) {
-                        if (searchMatch.item.producType === ProducType.SERIE) {
-                            continue
-                        }
-                        throw new Error(`No se pudo distribuir la cantidad total del order stock ${orderStock._id}`)
-                    }
-
-                    const transactionOrderStock: ITransaction<OrderStockENTITY> = {
+                    stock_quantity_employee.push(_item)
+                    const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
                         database: company.code,
-                        collection,
+                        collection: collections.employeeStock,
                         transaction: 'updateOne',
-                        filter: { _id: orderStock._id },
+                        filter: { _id: searchMatch._id },
                         update: {
-                            $set: {
-                                state_consumption: StateInventory.PROCESADO,
-                                stock_quantity_employee
-                            }
+                            $inc: { amountConsumed: orderStock.quantity }
                         }
                     }
-                    transactions.push(transactionOrderStock)
-
-                    await this.repositoryWINOrder.executeTransactionBatch(transactions)
+                    transactions.push(transactionEmployeeStock)
                 } else {
-                    for (const [i, employeeStock] of data.sort((a, b) => b.available - a.available).entries()) {
-                        if (orderStock.quantity < 1) { break }
+                    for (const stockPersonal of dataStockPersonalAvailable) {
+                        if (orderStock.quantity <= 0) { break }
+                        const amountConsumed = Math.min(orderStock.quantity, stockPersonal.available)
+                        const _item = new StockQuantityEmployee()
+                        _item.quantity = amountConsumed
+                        _item._id_stock_employee = stockPersonal._id
 
-                        const available = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: [employeeStock._id] }, company.code)
-                        if (available[0].available < 1) { continue }
-
-                        if (orderStock.quantity <= available[0].available || i === data.length - 1) {
-                            await this.createAndExecuteTransactions(
-                                employeeStock,
-                                orderStock,
-                                company,
-                                orderStock.quantity,
-                                transactions,
-                                stock_quantity_employee
-                            )
-                        } else {
-                            await this.createAndExecuteTransactions(
-                                employeeStock,
-                                orderStock,
-                                company,
-                                available[0].available,
-                                transactions,
-                                stock_quantity_employee
-                            )
-                        }
-                    }
-
-                    if (orderStock.quantity > 0) {
-                        if (employeeStocks[0].item.producType === ProducType.SERIE) {
-                            continue
-                        }
-                        throw new Error(`No se pudo distribuir la cantidad total del order stock ${orderStock._id}`)
-                    }
-
-                    const transactionOrderStock: ITransaction<OrderStockENTITY> = {
-                        database: company.code,
-                        collection,
-                        transaction: 'updateOne',
-                        filter: { _id: orderStock._id },
-                        update: {
-                            $set: {
-                                state_consumption: StateInventory.PROCESADO,
-                                stock_quantity_employee
+                        stock_quantity_employee.push(_item)
+                        const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
+                            database: company.code,
+                            collection: collections.employeeStock,
+                            transaction: 'updateOne',
+                            filter: { _id: stockPersonal._id },
+                            update: {
+                                $inc: { amountConsumed }
                             }
                         }
+                        transactions.push(transactionEmployeeStock)
+                        orderStock.quantity -= amountConsumed
                     }
-
-                    transactions.push(transactionOrderStock)
-
-                    await this.repositoryWINOrder.executeTransactionBatch(transactions)
                 }
             }
+
+            const transactionOrderStock: ITransaction<OrderStockENTITY> = {
+                database: company.code,
+                collection,
+                transaction: 'updateOne',
+                filter: { _id: orderStock._id },
+                update: {
+                    $set: {
+                        state_consumption: StateInventory.PROCESADO,
+                        stock_quantity_employee
+                    }
+                }
+            }
+            transactions.push(transactionOrderStock)
+            await this.repositoryWINOrder.executeTransactionBatch(transactions)
 
             console.info(`Procesado ${indexCompany + 1}/${companiesLength} empresas (${company.code}), procesado ${indexOrderStock + 1}/${orderStocks.length} orden stock`)
         }
     }
 
-    private async createAndExecuteTransactions(
-        employeeStock: EmployeeStockENTITY,
-        orderStock: OrderStockENTITY,
-        company: RootCompanyENTITY,
-        amountConsumed: number,
-        transactions: ITransaction<any>[],
-        stockQuantityEmployee: StockQuantityEmployee[]
-    ) {
-
-        if (employeeStock.item.producType === ProducType.SERIE) {
-            const pipeline = [{
-                $match: {
-                    identity: employeeStock.employee.identity,
-                    keySearch: employeeStock.keySearch,
-                    keyDetail: employeeStock.keyDetail,
-                    serial: orderStock.serial,
-                    state: StateStockSerialEmployee.RESERVADO_CONSUMO, // posesion o Reservado_consumo
-                    isDeleted: false
+    private async addAvailableStockPersonal(employeeStocks: EmployeeStockENTITY[], company: RootCompanyENTITY) {
+        const availables = await this.repositoryWINOrder.validateAvailableEmployeeStocks({ _ids: employeeStocks.map(e => e._id) }, company.code)
+        const data = employeeStocks
+            .map(e => {
+                const stock = availables.filter(el => el.identity === e.employee.identity && el.keyDetail === e.keyDetail && el.keySearch === e.keySearch)
+                if (stock.length !== 1) {
+                    throw new Error(
+                        `Hay ${stock.length} resultados en validateAvailableEmployeeStocks identity: ${e.employee.identity}, keyDetail: ${e.keyDetail}, keySearch: ${e.keySearch}`
+                    )
                 }
-            }]
-            const employeeStockSerial = await this.repositoryWINOrder.select<EmployeeStockSerialENTITY>(
-                pipeline,
-                collections.employeeStockSerial,
-                company.code
-            )
+                return { ...e, available: stock[0].available } as EmployeeStockENTITY
+            })
+            .filter(e => e.available > 0)
+        return data
+    }
 
-            if (employeeStockSerial.length === 0) {
-                return false
+    private getStockPersonalEquipos(employee: EmployeeENTITY, orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
+        const pipeline = [{
+            $match: {
+                identity: employee.identity,
+                itemCode: orderStock.itemCode,
+                serial: orderStock.serial,
+                state: StateStockSerialEmployee.RESERVADO_CONSUMO,
+                isDeleted: false
             }
+        }]
+        return this.repositoryWINOrder.selectOne<EmployeeStockSerialENTITY>(
+            pipeline,
+            collections.employeeStockSerial,
+            company.code
+        )
+    }
 
-            if (employeeStockSerial.length > 1) {
-                throw new Error(
-                    `Hay ${employeeStockSerial.length} resultados para stock personal serie ${JSON.stringify(pipeline[0].$match)}`
-                )
+    private getStockPersonalAux(personel: EmployeeENTITY, company: RootCompanyENTITY, stockPersonalEquipo: EmployeeStockSerialENTITY) {
+        const pipelineEmployeeStock = [{
+            $match: {
+                'employee.identity': personel.identity,
+                keySearch: stockPersonalEquipo.keySearch,
+                keyDetail: stockPersonalEquipo.keyDetail,
+                stockType: StockType.NUEVO,
+                state: State.ACTIVO,
+                isDeleted: false
             }
+        }]
+        return this.repositoryWINOrder.selectOne<EmployeeStockENTITY>(
+            pipelineEmployeeStock,
+            collections.employeeStock,
+            company.code
+        )
+    }
 
-            const transaction: ITransaction<EmployeeStockSerialENTITY> = {
-                database: company.code,
-                collection: collections.employeeStockSerial,
-                transaction: 'updateOne',
-                filter: { _id: employeeStockSerial[0]._id },
-                update: {
-                    $set: {
-                        state: StateStockSerialEmployee.CONSUMIDO,
-                        documentNumber: orderStock.numero_de_peticion,
-                        updatedate: new Date()
-                    }
-                }
+    private getStockPersonal(personel: EmployeeENTITY, orderStock: OrderStockENTITY, company: RootCompanyENTITY) {
+        const pipelineEmployeeStock = [{
+            $match: {
+                'employee.identity': personel.identity,
+                'item.itemCode': orderStock.itemCode,
+                stockType: StockType.NUEVO,
+                state: State.ACTIVO,
+                isDeleted: false
             }
-            transactions.push(transaction)
-        }
-
-        const transactionEmployeeStock: ITransaction<EmployeeStockENTITY> = {
-            database: company.code,
-            collection: collections.employeeStock,
-            transaction: 'updateOne',
-            filter: { _id: employeeStock._id },
-            update: {
-                $inc: { amountConsumed }
-            }
-        }
-        transactions.push(transactionEmployeeStock)
-        orderStock.quantity -= amountConsumed
-        const _item = new StockQuantityEmployee()
-        _item._id_stock_employee = employeeStock._id
-        _item.quantity = amountConsumed
-        stockQuantityEmployee.push(_item)
+        }]
+        return this.repositoryWINOrder.select<EmployeeStockENTITY>(
+            pipelineEmployeeStock,
+            collections.employeeStock,
+            company.code
+        )
     }
 
     private searchPersonel(orderStock: OrderStockENTITY, company: RootCompanyENTITY, system: ScrapingSystem) {
@@ -332,5 +282,23 @@ export class UseCaseUpdateConsumed {
             }
         }]
         return this.repositoryWINOrder.selectOne<EmployeeENTITY>(pipeline, collections.employee, company.code)
+    }
+
+    private searchProduct(code: string, products: ProductENTITY[]) {
+        const product = products.find(product => product.itemCode === code)
+        if (!product) {
+            throw new Error(`No se encontro el producto con el codigo ${code}`)
+        }
+        return product
+    }
+
+    private searchDataProducts(company: RootCompanyENTITY) {
+        const pipeline = [{
+            $match: {
+                isDeleted: false,
+                state: State.ACTIVO
+            }
+        }]
+        return this.repositoryWINOrder.select<ProductENTITY>(pipeline, collections.product, company.code)
     }
 }
