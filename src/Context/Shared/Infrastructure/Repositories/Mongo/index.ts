@@ -63,7 +63,9 @@ export class MongoRepository<T extends Document> implements IMongoRepository<T> 
         const client = await this.adapterMongo.connection()
         const colEmployeeStock = client.db(database).collection(collections.employeeStock)
         const colWarehouseReturn = client.db(database).collection(collections.warehouseReturn)
-        return _validateAvailableEmployeeStocks({ colEmployeeStock, colWarehouseReturn, pipeline, _ids })
+        const colWinOrder = client.db(database).collection(collections.winOrder)
+        const colWinOrderStock = client.db(database).collection(collections.winOrderStock)
+        return _validateAvailableEmployeeStocks({ colEmployeeStock, colWarehouseReturn, colWinOrder, colWinOrderStock, pipeline, _ids })
     }
 
     async selectOne<ReturnType extends Document = T>(pipeline: Document[], collection: string = this.collection, database: string = this.database) {

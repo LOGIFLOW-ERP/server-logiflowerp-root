@@ -1,5 +1,5 @@
 import { BadRequestException } from '@Config/exception'
-import { StateOrder, EmployeeStockENTITY } from 'logiflowerp-sdk'
+import { StateOrder, EmployeeStockENTITY, StateInventory, OrderStockENTITY, WINOrderENTITY, StateInternalOrderWin } from 'logiflowerp-sdk'
 import { Collection, Document } from 'mongodb'
 
 // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
@@ -9,6 +9,8 @@ import { Collection, Document } from 'mongodb'
 interface Props {
     colEmployeeStock: Collection
     colWarehouseReturn: Collection
+    colWinOrder: Collection
+    colWinOrderStock: Collection
     pipeline?: Document[]
     _ids?: string[]
 }
@@ -18,7 +20,7 @@ interface Props {
 // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
 
 export async function _validateAvailableEmployeeStocks(params: Props) {
-    const { colWarehouseReturn, colEmployeeStock, pipeline, _ids } = params
+    const { colWarehouseReturn, colEmployeeStock, colWinOrder, colWinOrderStock, pipeline, _ids } = params
 
     if (!_ids && !pipeline) {
         throw new BadRequestException(`Debe enviar "_ids" o "pipeline"`)
@@ -79,17 +81,54 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
         transitMap.set(key, item.totalTransit)
     }
 
-    return dataEmployeeStock.map(employeeStock => {
+    const dataReturn: {
+        keySearch: string,
+        keyDetail: string,
+        identity: string,
+        available: number
+    }[] = []
+
+    for (const employeeStock of dataEmployeeStock) {
+        const pipeline = [{
+            $match: {
+                'inventory._id_stock': employeeStock._id,
+                estado_interno: { $ne: StateInternalOrderWin.FINALIZADA }
+            }
+        }]
+
+        const dataWinOrders = await colWinOrder.aggregate<WINOrderENTITY>(pipeline).toArray()
+        const transitWinOrders = dataWinOrders.reduce((acc, winOrder) => {
+            return acc += winOrder.inventory.reduce((acc2, inventory) => {
+                if (inventory._id_stock === employeeStock._id) {
+                    return acc2 += inventory.quantity
+                }
+                return acc2
+            }, 0)
+        }, 0)
+
+        const pipelineWinOrderStock = [{
+            $match: {
+                _id_stock: employeeStock._id,
+                state_consumption: StateInventory.PENDIENTE
+            }
+        }]
+        const dataWinOrderStock = await colWinOrderStock.aggregate<OrderStockENTITY>(pipelineWinOrderStock).toArray()
+        const transitWinOrderStock = dataWinOrderStock.reduce((acc, winOrder) => {
+            return acc += winOrder.quantity
+        }, 0)
+
         const { incomeAmount, amountReturned, amountConsumed, keyDetail, keySearch, employee: { identity } } = employeeStock
         const transit = transitMap.get(`${keySearch}||${keyDetail}||${identity}`) ?? 0
-        const available = incomeAmount - amountReturned - amountConsumed - transit
-        return {
+        const available = incomeAmount - amountReturned - amountConsumed - transit - transitWinOrders - transitWinOrderStock
+        dataReturn.push({
             keySearch,
             keyDetail,
             identity,
             available
-        }
-    })
+        })
+    }
+
+    return dataReturn
     // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
     // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
     // CUALQUIER CAMBIO SE DEBE HACER LOS MISMO EN BACKEND ROOT Y LOGISTICA
