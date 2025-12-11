@@ -45,7 +45,8 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
                 'detail.keySearch': { $in: keys.keysSearch },
                 'detail.keyDetail': { $in: keys.keysDetail },
                 'carrier.identity': { $in: keys.identities },
-                state: { $ne: StateOrder.VALIDADO }
+                state: { $ne: StateOrder.VALIDADO },
+                isDeleted: false
             }
         },
         {
@@ -92,7 +93,8 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
         const pipeline = [{
             $match: {
                 'inventory._id_stock': employeeStock._id,
-                estado_interno: { $ne: StateInternalOrderWin.FINALIZADA }
+                estado_interno: { $ne: StateInternalOrderWin.FINALIZADA },
+                isDeleted: false
             }
         }]
 
@@ -109,7 +111,8 @@ export async function _validateAvailableEmployeeStocks(params: Props) {
         const pipelineWinOrderStock = [{
             $match: {
                 _id_stock: employeeStock._id,
-                state_consumption: StateInventory.PENDIENTE
+                state_consumption: StateInventory.PENDIENTE,
+                isDeleted: false
             }
         }]
         const dataWinOrderStock = await colWinOrderStock.aggregate<OrderStockENTITY>(pipelineWinOrderStock).toArray()
